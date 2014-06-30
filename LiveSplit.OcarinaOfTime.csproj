@@ -49,13 +49,24 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Animation.cs" />
+    <Compile Include="Cutscene.cs" />
+    <Compile Include="Dialog.cs" />
+    <Compile Include="Entrance.cs" />
+    <Compile Include="Equipable.cs" />
+    <Compile Include="Inventory.cs" />
+    <Compile Include="Item.cs" />
     <Compile Include="OcarinaOfTimeScript.cs" />
     <Compile Include="ASLState.cs" />
     <Compile Include="ASLValueDefinition.cs" />
     <Compile Include="Component.cs" />
     <Compile Include="DeepPtr.cs" />
     <Compile Include="Factory.cs" />
+    <Compile Include="Offset.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Scene.cs" />
+    <Compile Include="ScreenType.cs" />
+    <Compile Include="Song.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
