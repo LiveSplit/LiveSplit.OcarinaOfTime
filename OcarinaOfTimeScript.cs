@@ -17,6 +17,8 @@ namespace LiveSplit.ASL
         public ASLState OldState { get; set; }
         public ASLState State { get; set; }
 
+        protected EmulatorBase Base { get; set; }
+
         public OcarinaOfTimeScript()
         {
             State = new ASLState();
@@ -53,44 +55,50 @@ namespace LiveSplit.ASL
         {
             ProcessModule module = Game.MainModule;
 
-            Rebuild(0x46d010 - ((int)module.BaseAddress));
+            Base = EmulatorBase.Mupen64;
+            Rebuild((int)Base - ((int)module.BaseAddress));
         }
 
         private void RebuildProject64()
         {
-            String version;
-            new DeepPointer(0x6aba2).Deref(Game, out version, 3);
+            String version = ~new DeepPointer<String>(3, Game, 0x6aba2);
 
             if (version == "1.6")
-                Rebuild(0x000D6A1C);
+                Base = EmulatorBase.Project64_16;
             else
-                Rebuild(0x001002FC);
+                Base = EmulatorBase.Project64_17;
+           
+            Rebuild((int)Base);
         }
 
         private void Rebuild(int _base)
         {
             State.ValueDefinitions.Clear();
 
-            AddPointer("byte400", "Data", _base, 0x11a570);
-            AddPointer("int", "GameFrames", _base, 0x11f568);
-            AddPointer("byte", "SceneID", _base, 0x1c8546);
-            AddPointer("sbyte", "GohmasHealth", _base, 0x1e840c);
-            AddPointer("sbyte", "GanonsHealth", _base, 0x1fa2dc);
-            AddPointer("short", "GanonsAnimation", _base, 0x1fa374);
-            AddPointer("short", "DialogID", _base, 0x1d8872);
-            AddPointer("byte", "IsOnTitleScreenOrFileSelect", _base, 0x11b92c);
-            AddPointer("float", "X", _base, 0x1c8714);
-            AddPointer("float", "Y", _base, 0x1c8718);
-            AddPointer("float", "Z", _base, 0x1c871c);
+            AddPointer<byte[]>(400, "Data", _base, 0x11a570);
+            AddPointer<int>("GameFrames", _base, 0x11f568);
+            AddPointer<Scene>("Scene", _base, 0x1c8546);
+            AddPointer<sbyte>("GohmasHealth", _base, 0x1e840c);
+            AddPointer<sbyte>("GanonsHealth", _base, 0x1fa2dc);
+            AddPointer<Animation>("GanonsAnimation", _base, 0x1fa374);
+            AddPointer<Dialog>("Dialog", _base, 0x1d8872);
+            AddPointer<ScreenType>("IsOnTitleScreenOrFileSelect", _base, 0x11b92c);
+            AddPointer<float>("X", _base, 0x1c8714);
+            AddPointer<float>("Y", _base, 0x1c8718);
+            AddPointer<float>("Z", _base, 0x1c871c);
         }
 
-        private void AddPointer(String type, String name, int _base, params int[] offsets)
+        private void AddPointer<T>(String name, int _base, params int[] offsets)
+        {
+            AddPointer<T>(1, name, _base, offsets);
+        }
+
+        private void AddPointer<T>(int length, String name, int _base, params int[] offsets)
         {
             State.ValueDefinitions.Add(new ASLValueDefinition()
                 {
-                    Type = type,
                     Identifier = name,
-                    Pointer = new DeepPointer(_base, offsets)
+                    Pointer = new DeepPointer<T>(length, Game, _base, offsets)
                 });
         }
 
@@ -144,12 +152,13 @@ namespace LiveSplit.ASL
             current.GameTime = TimeSpan.Zero;
             current.AccumulatedFrames = -current.GameFrames;
 
-            current.EntranceID = 0xFFFF;
-            current.CutsceneID = 0x0;
+            current.Entrance = Entrance.None;
+            current.Cutscene = Cutscene.None;
 
             current.EyeBallFrogCount =
             current.LastActualDialog =
             current.LastActualDialogTime =
+            current.HeartContainers =
                 0;
 
             current.HasSword =
@@ -174,18 +183,25 @@ namespace LiveSplit.ASL
                 false;
 
             //Check for Timer Start
-            return (old.SceneID == 0x17 || old.SceneID == 0x18)
-                && !(current.SceneID == 0x17 || current.SceneID == 0x18);
+            return (old.Scene == Scene.FileSelect1 || old.Scene == Scene.FileSelect2)
+                && !(current.Scene == Scene.FileSelect1 || current.Scene == Scene.FileSelect2);
+        }
+
+        public void RBA(Item bItemAfterUsing, Item cRightItem)
+        {
+            var ptr = new DeepPointer<Item>(Game, (int)Base, 0x11a644 + ((int)cRightItem ^ 0x3));
+            ptr += bItemAfterUsing;
         }
 
         public bool Split(LiveSplitState timer, dynamic old, dynamic current)
         {
             //Functions
             Func<byte, byte, bool> check = (x, y) => (x & y) != 0x0;
+            Func<Offset, byte> read = x => current.Data[(int)x];
             Func<int, byte> readFixed = x => current.Data[x ^ 0x3];
             Func<Inventory, Item> getInventoryItem = slot => (Item)readFixed((int)Offset.Inventory + (int)slot);
-            Func<Entrance> getEntrance = () => (Entrance)(current.Data[Offset.EntranceID + 1] << 8 | current.Data[Offset.EntranceID]);
-            Func<Cutscene> getCutscene = () => (Cutscene)(current.Data[Offset.CutsceneID + 1] << 8 | current.Data[Offset.CutsceneID]);
+            Func<Entrance> getEntrance = () => (Entrance)(current.Data[(int)Offset.Entrance + 1] << 8 | current.Data[(int)Offset.Entrance]);
+            Func<Cutscene> getCutscene = () => (Cutscene)(current.Data[(int)Offset.Cutscene + 1] << 8 | current.Data[(int)Offset.Cutscene]);
             Func<Entrance, Entrance, bool> checkEntrance = (x, y) => ((short)x | 0x3) == ((short)y | 0x3);
 
             //Check for Split
@@ -194,7 +210,7 @@ namespace LiveSplit.ASL
             //Don't split on Title Screen or File Select because
             //Title Screen Link and Third File Link are loaded
             //and they might cause some splits to happen
-            if (current.IsOnTitleScreenOrFileSelect != 0x0)
+            if (current.IsOnTitleScreenOrFileSelect != ScreenType.None)
             {
                 //TODO Except some segments
                 return false;
@@ -202,54 +218,54 @@ namespace LiveSplit.ASL
 
             if (segment == "sword" || segment == "kokiri sword")
             {
-                var swordsAndShieldsUnlocked = (Equipable)current.Data[Offset.SwordsAndShields];
+                var swordsAndShieldsUnlocked = (Equipable)read(Offset.SwordsAndShields);
                 current.HasSword = swordsAndShieldsUnlocked.HasFlag(Equipable.KokiriSword);
                 return !old.HasSword && current.HasSword;
             }
             else if (segment == "master sword")
             {
-                var swordsAndShieldsUnlocked = (Equipable)current.Data[Offset.SwordsAndShields];
+                var swordsAndShieldsUnlocked = (Equipable)read(Offset.SwordsAndShields);
                 current.HasMasterSword = swordsAndShieldsUnlocked.HasFlag(Equipable.MasterSword);
                 return !old.HasMasterSword && current.HasMasterSword;
             }
             else if (segment == "biggoron sword" || segment == "biggoron's sword")
             {
-                var swordsAndShieldsUnlocked = (Equipable)current.Data[Offset.SwordsAndShields];
+                var swordsAndShieldsUnlocked = (Equipable)read(Offset.SwordsAndShields);
                 current.HasBiggoronSword = swordsAndShieldsUnlocked.HasFlag(Equipable.BiggoronSword);
                 return !old.HasBiggoronSword && current.HasBiggoronSword;
             }
             else if (segment == "hover boots")
             {
-                var bootsAndTunicsUnlocked = (Equipable)current.Data[Offset.BootsAndTunics];
+                var bootsAndTunicsUnlocked = (Equipable)read(Offset.BootsAndTunics);
                 current.HasHoverBoots = bootsAndTunicsUnlocked.HasFlag(Equipable.HoverBoots);
                 return !old.HasHoverBoots && current.HasHoverBoots;
             }
             else if (segment == "iron boots")
             {
-                var bootsAndTunicsUnlocked = (Equipable)current.Data[Offset.BootsAndTunics];
+                var bootsAndTunicsUnlocked = (Equipable)read(Offset.BootsAndTunics);
                 current.HasIronBoots = bootsAndTunicsUnlocked.HasFlag(Equipable.IronBoots);
                 return !old.HasIronBoots && current.HasIronBoots;
             }
             else if (segment == "song of storms")
             {
-                var songsAndEmeraldsUnlocked = (Song)current.Data[Offset.SongsAndEmeralds];
+                var songsAndEmeraldsUnlocked = (Song)read(Offset.SongsAndEmeralds);
                 current.HasSongOfStorms = songsAndEmeraldsUnlocked.HasFlag(Song.SongOfStorms);
-                return old.DialogID == Dialog.SongOfStorms
-                    && current.DialogID == Dialog.None
+                return old.Dialog == Dialog.SongOfStorms
+                    && current.Dialog == Dialog.None
                     && current.HasSongOfStorms;
             }
             else if (segment == "bolero of fire")
             {
-                var songsAndMedallionsUnlocked = (Song)current.Data[Offset.SongsAndMedallions];
+                var songsAndMedallionsUnlocked = (Song)read(Offset.SongsAndMedallions);
                 current.HasBoleroOfFire = songsAndMedallionsUnlocked.HasFlag(Song.BoleroOfFire);
                 return !old.HasBoleroOfFire && current.HasBoleroOfFire;
             }
             else if (segment == "requiem of spirit")
             {
-                var songsUnlocked = (Song)current.Data[Offset.Songs];
+                var songsUnlocked = (Song)read(Offset.Songs);
                 current.HasRequiemOfSpirit = songsUnlocked.HasFlag(Song.RequiemOfSpirit);
-                return old.DialogID == Dialog.RequiemOfSpirit
-                    && current.DialogID == Dialog.None
+                return old.Dialog == Dialog.RequiemOfSpirit
+                    && current.Dialog == Dialog.None
                     && current.HasRequiemOfSpirit;
             }
             else if (segment == "bottle")
@@ -302,16 +318,16 @@ namespace LiveSplit.ASL
             }
             else if (segment == "forest escape" || segment == "escape")
             {
-                current.EntranceID = getEntrance();
-                current.CutsceneID = getCutscene();
+                current.Entrance = getEntrance();
+                current.Cutscene = getCutscene();
 
                 var escapedToRiver =
-                    !checkEntrance(old.EntranceID, Entrance.ForestToRiver)
-                    && checkEntrance(current.EntranceID, Entrance.ForestToRiver);
+                    !checkEntrance(old.Entrance, Entrance.ForestToRiver)
+                    && checkEntrance(current.Entrance, Entrance.ForestToRiver);
 
                 current.IsInFairyOcarinaCutscene =
-                    checkEntrance(current.EntranceID, Entrance.BridgeBetweenFieldAndForest)
-                    && current.CutsceneID == Cutscene.FairyOcarina;
+                    checkEntrance(current.Entrance, Entrance.BridgeBetweenFieldAndForest)
+                    && current.Cutscene == Cutscene.FairyOcarina;
 
                 var escapedToSaria =
                     !old.IsInFairyOcarinaCutscene
@@ -321,12 +337,12 @@ namespace LiveSplit.ASL
             }
             else if (segment == "kakariko")
             {
-                return old.SceneID != Scene.Kakariko && current.SceneID == Scene.Kakariko;
+                return old.Scene != Scene.Kakariko && current.Scene == Scene.Kakariko;
             }
             else if (segment == "mido skip")
             {
                 current.DidMidoSkip =
-                    current.SceneID == Scene.KokiriForest
+                    current.Scene == Scene.KokiriForest
                     && current.X > 1600
                     && current.Y >= 0;
 
@@ -334,38 +350,38 @@ namespace LiveSplit.ASL
             }
             else if (segment == "deku tree")
             {
-                return old.SceneID == Scene.KokiriForest && current.SceneID == Scene.DekuTree;
+                return old.Scene == Scene.KokiriForest && current.Scene == Scene.DekuTree;
             }
             else if (segment == "gohma")
             {
-                return current.SceneID == Scene.Gohma
+                return current.Scene == Scene.Gohma
                     && old.GohmasHealth > 0
                     && current.GohmasHealth <= 0;
             }
             else if (segment == "ganondorf" || segment == "wrong warp")
             {
-                current.EntranceID = getEntrance();
-                return checkEntrance(old.EntranceID, Entrance.WrongWarp)
-                    && !checkEntrance(current.EntranceID, Entrance.WrongWarp);
+                current.Entrance = getEntrance();
+                return checkEntrance(old.Entrance, Entrance.WrongWarp)
+                    && !checkEntrance(current.Entrance, Entrance.WrongWarp);
             }
             else if (segment == "fire temple")
             {
-                current.EntranceID = getEntrance();
-                return checkEntrance(old.EntranceID, Entrance.VolvagiaBattle)
-                    && !checkEntrance(current.EntranceID, Entrance.VolvagiaBattle);
+                current.Entrance = getEntrance();
+                return checkEntrance(old.Entrance, Entrance.VolvagiaBattle)
+                    && !checkEntrance(current.Entrance, Entrance.VolvagiaBattle);
                 //TODO Test with wrong warp
             }
             else if (segment == "collapse" || segment == "tower collapse")
             {
-                current.EntranceID = getEntrance();
-                return !checkEntrance(old.EntranceID, Entrance.GanonBattle)
-                    && checkEntrance(current.EntranceID, Entrance.GanonBattle);
+                current.Entrance = getEntrance();
+                return !checkEntrance(old.Entrance, Entrance.GanonBattle)
+                    && checkEntrance(current.Entrance, Entrance.GanonBattle);
             }
             else if (segment.EndsWith("warp in fire"))
             {
-                if (current.DialogID != Dialog.None)
+                if (current.Dialog != Dialog.None)
                 {
-                    current.LastActualDialog = (Dialog)current.DialogID;
+                    current.LastActualDialog = current.Dialog;
                     current.LastActualDialogTime = current.GameFrames;
                 }
 
@@ -385,15 +401,15 @@ namespace LiveSplit.ASL
             }
             else if (segment.EndsWith("dodongo hc") || segment.EndsWith("dodongo heart container"))
             {
-                current.EntranceID = getEntrance();
-                current.HeartContainers = current.Data[Offset.HeartContainers] >> 4;
-                return checkEntrance(current.EntranceID, Entrance.DodongoBattle)
+                current.Entrance = getEntrance();
+                current.HeartContainers = read(Offset.HeartContainers) >> 4;
+                return checkEntrance(current.Entrance, Entrance.DodongoBattle)
                     && current.HeartContainers > old.HeartContainers;
             }
             else if (segment == "ganon")
             {
-                current.EntranceID = getEntrance();
-                return checkEntrance(current.EntranceID, Entrance.GanonBattle)
+                current.Entrance = getEntrance();
+                return checkEntrance(current.Entrance, Entrance.GanonBattle)
                     && current.GanonsHealth <= 0
                     && old.GanonsAnimation != Animation.GanonFinalHit
                     && current.GanonsAnimation == Animation.GanonFinalHit;

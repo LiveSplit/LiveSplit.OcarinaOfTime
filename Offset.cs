@@ -7,8 +7,8 @@ namespace LiveSplit.OcarinaOfTime
 {
     public enum Offset : int
     {
-        EntranceID = 0x60,
-        CutsceneID = 0x68,
+        Entrance = 0x60,
+        Cutscene = 0x68,
         HeartContainers = 0x8C,
         Inventory = 0xD4,
         SwordsAndShields = 0xFE,

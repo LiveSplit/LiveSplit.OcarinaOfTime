@@ -7,6 +7,7 @@ namespace LiveSplit.OcarinaOfTime
 {
     public enum Cutscene : ushort
     {
+        None = 0x0,
         FairyOcarina = 0xFFF0
     }
 }

@@ -10,6 +10,6 @@ namespace LiveSplit.ASL
     {
         public String Type { get; set; }
         public String Identifier { get; set; }
-        public DeepPointer Pointer { get; set; }
+        public dynamic Pointer { get; set; }
     }
 }

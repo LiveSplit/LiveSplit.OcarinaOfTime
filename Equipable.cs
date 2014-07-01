@@ -22,7 +22,7 @@ namespace LiveSplit.OcarinaOfTime
         GoronTunic = 0x2,
         ZoraTunic = 0x4,
 
-        NormalBoots = 0x10,
+        KokiriBoots = 0x10,
         IronBoots = 0x20,
         HoverBoots = 0x40
     }

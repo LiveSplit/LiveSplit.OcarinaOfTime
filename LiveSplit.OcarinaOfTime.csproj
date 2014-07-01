@@ -52,6 +52,7 @@
     <Compile Include="Animation.cs" />
     <Compile Include="Cutscene.cs" />
     <Compile Include="Dialog.cs" />
+    <Compile Include="EmulatorBase.cs" />
     <Compile Include="Entrance.cs" />
     <Compile Include="Equipable.cs" />
     <Compile Include="Inventory.cs" />

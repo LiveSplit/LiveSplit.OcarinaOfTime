@@ -5,12 +5,10 @@ using System.Text;
 
 namespace LiveSplit.OcarinaOfTime
 {
-    public enum Animation : ushort
+    public enum EmulatorBase : int
     {
-        #region Ganon
-
-        GanonFinalHit = 0x3B1C
-
-        #endregion
+        Project64_16 = 0x000D6A1C,
+        Project64_17 = 0x001002FC,
+        Mupen64 = 0x46d010
     }
 }

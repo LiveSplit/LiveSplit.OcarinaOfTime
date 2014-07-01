@@ -8,14 +8,17 @@ using System.Text;
 
 namespace LiveSplit
 {
-    public class DeepPointer
+    public class DeepPointer<T>
     {
+        private Process _process;
         private List<int> _offsets;
         private int _base;
+        private int _length;
         private string _module;
 
-        public DeepPointer(string module, int base_, params int[] offsets)
+        public DeepPointer(Process process, string module, int base_, params int[] offsets)
         {
+            _process = process;
             _module = module.ToLower();
             _base = base_;
             _offsets = new List<int>();
@@ -23,15 +26,63 @@ namespace LiveSplit
             _offsets.AddRange(offsets);
         }
 
-        public DeepPointer(int base_, params int[] offsets)
+        public DeepPointer(int length, Process process, int base_, params int[] offsets)
+            : this(process, base_, offsets)
         {
+            _length = length;
+        }
+
+        public DeepPointer(Process process, int base_, params int[] offsets)
+        {
+            _process = process;
             _base = base_;
             _offsets = new List<int>();
             _offsets.Add(0); // deref base first
             _offsets.AddRange(offsets);
         }
 
-        public bool Deref<T>(Process process, out T value) where T : struct
+        public static T operator ~(DeepPointer<T> p)
+        {
+            if (typeof(T) == typeof(String))
+            {
+                String x = null;
+                p.Deref(p._process, out x, p._length);
+                return (T)((object)x);
+            }
+            else if (p._length <= 1)
+            {
+                T x = default(T);
+                p.Deref<T>(p._process, out x);
+                return x;
+            }
+            else if (typeof(T) == typeof(byte[]))
+            {
+                byte[] x = null;
+                p.Deref(p._process, out x, p._length);
+                return (T)((object)x);
+            }
+            throw new NotSupportedException("Only enums, structs, strings and byte arrays supported");
+        }
+
+        public static DeepPointer<T> operator +(DeepPointer<T> p, T x)
+        {
+            int offset = p._offsets[p._offsets.Count - 1];
+
+            IntPtr ptr;
+            p.DerefOffsets(p._process, out ptr);
+
+            var type = typeof(T);
+            IntPtr written;
+
+            var buffer = ToBytes(x, type);
+            var size = buffer.Length;
+
+            var result = SafeNativeMethods.WriteProcessMemory(p._process.Handle, ptr + offset, buffer, size, out written);
+
+            return p;
+        }
+
+        private bool Deref<T>(Process process, out T value)
         {
             int offset = _offsets[_offsets.Count - 1];
             IntPtr ptr;
@@ -45,7 +96,7 @@ namespace LiveSplit
             return true;
         }
 
-        public bool Deref(Process process, Type type, out object value)
+        private bool Deref(Process process, Type type, out object value)
         {
             int offset = _offsets[_offsets.Count - 1];
             IntPtr ptr;
@@ -59,7 +110,7 @@ namespace LiveSplit
             return true;
         }
 
-        public bool Deref(Process process, out byte[] value, int elementCount)
+        private bool Deref(Process process, out byte[] value, int elementCount)
         {
             int offset = _offsets[_offsets.Count - 1];
             IntPtr ptr;
@@ -73,7 +124,7 @@ namespace LiveSplit
             return true;
         }
 
-        public bool Deref(Process process, out Vector3f value)
+        private bool Deref(Process process, out Vector3f value)
         {
             int offset = _offsets[_offsets.Count - 1];
             IntPtr ptr;
@@ -91,7 +142,7 @@ namespace LiveSplit
             return true;
         }
 
-        public bool Deref(Process process, out string str, int max)
+        private bool Deref(Process process, out string str, int max)
         {
             var sb = new StringBuilder(max);
 
@@ -140,7 +191,7 @@ namespace LiveSplit
             return true;
         }
 
-        static bool ReadProcessValue<T>(Process process, IntPtr addr, out T val) where T : struct
+        static bool ReadProcessValue<T>(Process process, IntPtr addr, out T val)
         {
             Type type = typeof(T);
 
@@ -155,7 +206,7 @@ namespace LiveSplit
         {
             byte[] bytes;
 
-            var result = ReadProcessBytes(process, addr, Marshal.SizeOf(type), out bytes);
+            var result = ReadProcessBytes(process, addr, Marshal.SizeOf(type.IsEnum ? Enum.GetUnderlyingType(type) : type), out bytes);
 
             val = ResolveToType(bytes, type);
 
@@ -174,6 +225,60 @@ namespace LiveSplit
             val = bytes;
 
             return true;
+        }
+
+        static byte[] ToBytes(object o, Type type)
+        {
+            var size = Marshal.SizeOf(type.IsEnum ? Enum.GetUnderlyingType(type) : type);
+
+            if (typeof(byte[]) == type)
+            {
+                return (byte[])o;
+            }
+            else if (type.IsEnum)
+            {
+                return ToBytes(o, Enum.GetUnderlyingType(type));
+            }
+
+            if (type == typeof(int))
+            {
+                return BitConverter.GetBytes((int)o);
+            }
+            else if (type == typeof(uint))
+            {
+                return BitConverter.GetBytes((uint)o);
+            }
+            else if (type == typeof(float))
+            {
+                return BitConverter.GetBytes((float)o);
+            }
+            else if (type == typeof(byte))
+            {
+                return new byte[1] { (byte)o };
+            }
+            else if (type == typeof(bool))
+            {
+                return BitConverter.GetBytes((bool)o);
+            }
+            else if (type == typeof(short))
+            {
+                return BitConverter.GetBytes((short)o);
+            }
+
+            var buffer = new byte[size];
+
+            IntPtr box = Marshal.AllocHGlobal(size);
+            try
+            {
+                Marshal.StructureToPtr(o, box, true);
+                Marshal.Copy(box, buffer, 0, size);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(box);
+            }
+
+            return buffer;
         }
 
         static object ResolveToType(byte[] bytes, Type type)
@@ -203,6 +308,10 @@ namespace LiveSplit
             else if (type == typeof(short))
             {
                 val = (object)BitConverter.ToInt16(bytes, 0);
+            }
+            else if (type.IsEnum)
+            {
+                val = ResolveToType(bytes, Enum.GetUnderlyingType(type));
             }
             else
             {  
@@ -306,5 +415,13 @@ namespace LiveSplit
             [Out] byte[] lpBuffer,
             int dwSize, // should be IntPtr if we ever need to read a size bigger than 32 bit address space
             out int lpNumberOfBytesRead);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool WriteProcessMemory(
+            IntPtr hProcess,
+            IntPtr lpBaseAddress,
+            byte[] lpBuffer,
+            int nSize,
+            out IntPtr lpNumberOfBytesWritten);
     }
 }

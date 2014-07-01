@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LiveSplit.OcarinaOfTime;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
@@ -25,7 +26,7 @@ namespace LiveSplit.ASL
             var dict = ((IDictionary<string, object>)Data);
             foreach (var valueDefinition in ValueDefinitions)
             {
-                var value = GetValue(p, valueDefinition.Type, valueDefinition.Pointer);
+                var value = ~valueDefinition.Pointer;
                 if (dict.ContainsKey(valueDefinition.Identifier))
                 {
                     dict[valueDefinition.Identifier] = value;
@@ -38,7 +39,7 @@ namespace LiveSplit.ASL
             return clone;
         }
 
-        private dynamic GetValue(Process p, String type, DeepPointer pointer)
+        /*private dynamic GetValue(Process p, String type, DeepPointer<object> pointer)
         {
             if (type == "int")
             {
@@ -76,6 +77,12 @@ namespace LiveSplit.ASL
                 pointer.Deref<short>(p, out x);
                 return x;
             }
+            else if (type == "ushort")
+            {
+                ushort x;
+                pointer.Deref<ushort>(p, out x);
+                return x;
+            }
             else if (type == "sbyte")
             {
                 sbyte x;
@@ -96,8 +103,24 @@ namespace LiveSplit.ASL
                 pointer.Deref(p, out x, length);
                 return x;
             }
+            else if (type == "Scene")
+            {
+                return (Scene)GetValue(p, "byte", pointer);
+            }
+            else if (type == "Dialog")
+            {
+                return (Dialog)GetValue(p, "ushort", pointer);
+            }
+            else if (type == "ScreenType")
+            {
+                return (ScreenType)GetValue(p, "byte", pointer);
+            }
+            else if (type == "Animation")
+            {
+                return (Animation)GetValue(p, "ushort", pointer);
+            }
             throw new ArgumentException("The provided type is not supported");
-        }
+        }*/
 
         public object Clone()
         {
