@@ -10,6 +10,7 @@ namespace LiveSplit.OcarinaOfTime
         None = 0x0000,
         FaroresWind = 0x003B,
         RequiemOfSpirit = 0x0076,
+        NocturneOfShadow = 0x0077,
         SongOfStorms = 0x00D6
     }
 }

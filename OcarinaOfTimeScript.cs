@@ -168,12 +168,15 @@ namespace LiveSplit.ASL
             current.HasSlingshot =
             current.HasBombchus =
             current.HasHookshot =
+            current.HasLongshot =
             current.HasIronBoots =
             current.HasHoverBoots =
             current.HasSongOfStorms =
             current.HasBombs =
             current.HasBoleroOfFire =
             current.HasRequiemOfSpirit =
+            current.HasNocturneOfShadow =
+            current.HasZeldasLullaby =
             current.HasEyeBallFrog =
             current.HasMasterSword =
             current.HasBiggoronSword =
@@ -193,6 +196,17 @@ namespace LiveSplit.ASL
             ptr += bItemAfterUsing;
         }
 
+        public void ReplaceGreenTunic()
+        {
+            var ptr = new DeepPointer<byte>(Game, (int)Base, 0x11a643);
+            var oldValue = ~ptr;
+            var currentTunic = oldValue & 0x7;
+            if (currentTunic != 3 && currentTunic != 2)
+            {
+                ptr += (byte)((oldValue & ~0x7) | ((((dynamic)State.Data).GameFrames / (20 * 60 * 5)) % 3 + 0x4));
+            }
+        }
+
         public bool Split(LiveSplitState timer, dynamic old, dynamic current)
         {
             //Functions
@@ -203,6 +217,8 @@ namespace LiveSplit.ASL
             Func<Entrance> getEntrance = () => (Entrance)(current.Data[(int)Offset.Entrance + 1] << 8 | current.Data[(int)Offset.Entrance]);
             Func<Cutscene> getCutscene = () => (Cutscene)(current.Data[(int)Offset.Cutscene + 1] << 8 | current.Data[(int)Offset.Cutscene]);
             Func<Entrance, Entrance, bool> checkEntrance = (x, y) => ((short)x | 0x3) == ((short)y | 0x3);
+
+            //ReplaceGreenTunic();
 
             //Check for Split
             var segment = timer.CurrentSplit.Name.ToLower();
@@ -260,6 +276,13 @@ namespace LiveSplit.ASL
                 current.HasBoleroOfFire = songsAndMedallionsUnlocked.HasFlag(Song.BoleroOfFire);
                 return !old.HasBoleroOfFire && current.HasBoleroOfFire;
             }
+            else if (segment.Contains("lullaby"))
+            {
+                var songsUnlocked = (Song)read(Offset.Songs);
+                current.HasZeldasLullaby = songsUnlocked.HasFlag(Song.ZeldasLullaby);
+                return !old.HasZeldasLullaby && current.HasZeldasLullaby;
+                //TODO Include casual version (probably after some textbox)
+            }
             else if (segment == "requiem of spirit")
             {
                 var songsUnlocked = (Song)read(Offset.Songs);
@@ -267,6 +290,14 @@ namespace LiveSplit.ASL
                 return old.Dialog == Dialog.RequiemOfSpirit
                     && current.Dialog == Dialog.None
                     && current.HasRequiemOfSpirit;
+            }
+            else if (segment == "nocturne of shadow")
+            {
+                var songsUnlocked = (Song)read(Offset.Songs);
+                current.HasNocturneOfShadow = songsUnlocked.HasFlag(Song.NocturneOfShadow);
+                return old.Dialog == Dialog.NocturneOfShadow
+                    && current.Dialog == Dialog.None
+                    && current.HasNocturneOfShadow;
             }
             else if (segment == "bottle")
             {
@@ -301,7 +332,7 @@ namespace LiveSplit.ASL
                 current.HasSlingshot = getInventoryItem(Inventory.Slingshot) == Item.Slingshot;
                 return !old.HasSlingshot && current.HasSlingshot;
             }
-            else if (segment == "bombchus")
+            else if (segment == "bombchus" || segment == "spirit chus" || segment == "spirit bombchus")
             {
                 current.HasBombchus = getInventoryItem(Inventory.Bombchus) == Item.Bombchus;
                 return !old.HasBombchus && current.HasBombchus;
@@ -310,6 +341,12 @@ namespace LiveSplit.ASL
             {
                 current.HasHookshot = getInventoryItem(Inventory.Hookshot) == Item.Hookshot;
                 return !old.HasHookshot && current.HasHookshot;
+            }
+            else if (segment == "longshot")
+            {
+                current.HasLongshot = getInventoryItem(Inventory.Hookshot) == Item.Longshot;
+                return !old.HasLongshot && current.HasLongshot;
+                //TODO Test
             }
             else if (segment == "bombs")
             {
@@ -334,6 +371,15 @@ namespace LiveSplit.ASL
                     && current.IsInFairyOcarinaCutscene;
 
                 return escapedToRiver || escapedToSaria;
+            }
+            else if (segment == "child 2")
+            {
+                current.Cutscene = getCutscene();
+
+                return old.Cutscene == Cutscene.None
+                    && current.Cutscene == Cutscene.MasterSword
+                    && current.Scene == Scene.TempleOfTime;
+                //TODO Test (might screw up when doing the weird suns song thing)
             }
             else if (segment == "kakariko")
             {
@@ -377,7 +423,7 @@ namespace LiveSplit.ASL
                 return !checkEntrance(old.Entrance, Entrance.GanonBattle)
                     && checkEntrance(current.Entrance, Entrance.GanonBattle);
             }
-            else if (segment.EndsWith("warp in fire"))
+            else if (segment.EndsWith("warp in fire") || segment.StartsWith("all fire"))
             {
                 if (current.Dialog != Dialog.None)
                 {
@@ -398,12 +444,28 @@ namespace LiveSplit.ASL
                         && current.Y == 0
                         && current.Z == 0;
                 }
+
+                //TODO Test All Fire Gold Skulltulas
             }
             else if (segment.EndsWith("dodongo hc") || segment.EndsWith("dodongo heart container"))
             {
                 current.Entrance = getEntrance();
                 current.HeartContainers = read(Offset.HeartContainers) >> 4;
                 return checkEntrance(current.Entrance, Entrance.DodongoBattle)
+                    && current.HeartContainers > old.HeartContainers;
+            }
+            else if (segment == "forest temple")
+            {
+                current.Entrance = getEntrance();
+                current.HeartContainers = read(Offset.HeartContainers) >> 4;
+                return checkEntrance(current.Entrance, Entrance.ForestTempleBoss)
+                    && current.HeartContainers > old.HeartContainers;
+            }
+            else if (segment == "water temple" || segment.Contains("morpha") && (segment.Contains("heart container") || segment.Contains("hc")))
+            {
+                current.Entrance = getEntrance();
+                current.HeartContainers = read(Offset.HeartContainers) >> 4;
+                return checkEntrance(current.Entrance, Entrance.WaterTempleBoss)
                     && current.HeartContainers > old.HeartContainers;
             }
             else if (segment == "ganon")

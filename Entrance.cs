@@ -93,6 +93,7 @@ namespace LiveSplit.OcarinaOfTime
         VolvagiaBattle = 0x305,
         GanondorfDead = 0x330,
         DodongoBattle = 0x40B,
+        WaterTempleBoss = 0x417,
         GanonBattle = 0x517,
         None = 0xFFFF
     }

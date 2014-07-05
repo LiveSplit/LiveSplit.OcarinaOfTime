@@ -11,6 +11,7 @@ namespace LiveSplit.OcarinaOfTime
         Gohma = 0x11,
         FileSelect1 = 0x17,
         FileSelect2 = 0x18,
+        TempleOfTime = 0x43,
         Kakariko = 0x52,
         KokiriForest = 0x55
     }
