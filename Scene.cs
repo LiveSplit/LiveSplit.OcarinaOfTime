@@ -13,6 +13,7 @@ namespace LiveSplit.OcarinaOfTime
         FileSelect2 = 0x18,
         TempleOfTime = 0x43,
         Kakariko = 0x52,
+        Graveyard = 0x53,
         KokiriForest = 0x55
     }
 }

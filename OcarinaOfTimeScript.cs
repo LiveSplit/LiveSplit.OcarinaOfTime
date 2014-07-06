@@ -75,7 +75,7 @@ namespace LiveSplit.ASL
         {
             State.ValueDefinitions.Clear();
 
-            AddPointer<byte[]>(400, "Data", _base, 0x11a570);
+            AddPointer<GameData>("Data", _base, 0x11a5d0);
             AddPointer<int>("GameFrames", _base, 0x11f568);
             AddPointer<Scene>("Scene", _base, 0x1c8546);
             AddPointer<sbyte>("GohmasHealth", _base, 0x1e840c);
@@ -152,11 +152,9 @@ namespace LiveSplit.ASL
             current.GameTime = TimeSpan.Zero;
             current.AccumulatedFrames = -current.GameFrames;
 
-            current.Entrance = Entrance.None;
-            current.Cutscene = Cutscene.None;
+            current.LastActualDialog = Dialog.None;
 
             current.EyeBallFrogCount =
-            current.LastActualDialog =
             current.LastActualDialogTime =
             current.HeartContainers =
                 0;
@@ -169,6 +167,7 @@ namespace LiveSplit.ASL
             current.HasBombchus =
             current.HasHookshot =
             current.HasLongshot =
+            current.HasBoomerang =
             current.HasIronBoots =
             current.HasHoverBoots =
             current.HasSongOfStorms =
@@ -211,14 +210,9 @@ namespace LiveSplit.ASL
         {
             //Functions
             Func<byte, byte, bool> check = (x, y) => (x & y) != 0x0;
-            Func<Offset, byte> read = x => current.Data[(int)x];
-            Func<int, byte> readFixed = x => current.Data[x ^ 0x3];
-            Func<Inventory, Item> getInventoryItem = slot => (Item)readFixed((int)Offset.Inventory + (int)slot);
-            Func<Entrance> getEntrance = () => (Entrance)(current.Data[(int)Offset.Entrance + 1] << 8 | current.Data[(int)Offset.Entrance]);
-            Func<Cutscene> getCutscene = () => (Cutscene)(current.Data[(int)Offset.Cutscene + 1] << 8 | current.Data[(int)Offset.Cutscene]);
+            Func<Inventory, Item> getInventoryItem = slot => current.Data.Inventory[(int)slot ^ 0x3];
+            Action refreshHeartContainers = () => current.HeartContainers = current.Data.HeartContainers >> 4;
             Func<Entrance, Entrance, bool> checkEntrance = (x, y) => ((short)x | 0x3) == ((short)y | 0x3);
-
-            //ReplaceGreenTunic();
 
             //Check for Split
             var segment = timer.CurrentSplit.Name.ToLower();
@@ -234,67 +228,57 @@ namespace LiveSplit.ASL
 
             if (segment == "sword" || segment == "kokiri sword")
             {
-                var swordsAndShieldsUnlocked = (Equipable)read(Offset.SwordsAndShields);
-                current.HasSword = swordsAndShieldsUnlocked.HasFlag(Equipable.KokiriSword);
+                current.HasSword = current.Data.SwordsAndShields.HasFlag(SwordsAndShields.KokiriSword);
                 return !old.HasSword && current.HasSword;
             }
             else if (segment == "master sword")
             {
-                var swordsAndShieldsUnlocked = (Equipable)read(Offset.SwordsAndShields);
-                current.HasMasterSword = swordsAndShieldsUnlocked.HasFlag(Equipable.MasterSword);
+                current.HasMasterSword = current.Data.SwordsAndShields.HasFlag(SwordsAndShields.MasterSword);
                 return !old.HasMasterSword && current.HasMasterSword;
             }
             else if (segment == "biggoron sword" || segment == "biggoron's sword")
             {
-                var swordsAndShieldsUnlocked = (Equipable)read(Offset.SwordsAndShields);
-                current.HasBiggoronSword = swordsAndShieldsUnlocked.HasFlag(Equipable.BiggoronSword);
+                current.HasBiggoronSword = current.Data.SwordsAndShields.HasFlag(SwordsAndShields.BiggoronSword);
                 return !old.HasBiggoronSword && current.HasBiggoronSword;
             }
             else if (segment == "hover boots")
             {
-                var bootsAndTunicsUnlocked = (Equipable)read(Offset.BootsAndTunics);
-                current.HasHoverBoots = bootsAndTunicsUnlocked.HasFlag(Equipable.HoverBoots);
+                current.HasHoverBoots = current.Data.TunicsAndBoots.HasFlag(TunicsAndBoots.HoverBoots);
                 return !old.HasHoverBoots && current.HasHoverBoots;
             }
             else if (segment == "iron boots")
             {
-                var bootsAndTunicsUnlocked = (Equipable)read(Offset.BootsAndTunics);
-                current.HasIronBoots = bootsAndTunicsUnlocked.HasFlag(Equipable.IronBoots);
+                current.HasIronBoots = current.Data.TunicsAndBoots.HasFlag(TunicsAndBoots.IronBoots);
                 return !old.HasIronBoots && current.HasIronBoots;
             }
             else if (segment == "song of storms")
             {
-                var songsAndEmeraldsUnlocked = (Song)read(Offset.SongsAndEmeralds);
-                current.HasSongOfStorms = songsAndEmeraldsUnlocked.HasFlag(Song.SongOfStorms);
+                current.HasSongOfStorms = current.Data.SongsAndEmeralds.HasFlag(SongsAndEmeralds.SongOfStorms);
                 return old.Dialog == Dialog.SongOfStorms
                     && current.Dialog == Dialog.None
                     && current.HasSongOfStorms;
             }
             else if (segment == "bolero of fire")
             {
-                var songsAndMedallionsUnlocked = (Song)read(Offset.SongsAndMedallions);
-                current.HasBoleroOfFire = songsAndMedallionsUnlocked.HasFlag(Song.BoleroOfFire);
+                current.HasBoleroOfFire = current.Data.MedallionsAndSongs.HasFlag(MedallionsAndSongs.BoleroOfFire);
                 return !old.HasBoleroOfFire && current.HasBoleroOfFire;
             }
             else if (segment.Contains("lullaby"))
             {
-                var songsUnlocked = (Song)read(Offset.Songs);
-                current.HasZeldasLullaby = songsUnlocked.HasFlag(Song.ZeldasLullaby);
+                current.HasZeldasLullaby = current.Data.Songs.HasFlag(Songs.ZeldasLullaby);
                 return !old.HasZeldasLullaby && current.HasZeldasLullaby;
                 //TODO Include casual version (probably after some textbox)
             }
             else if (segment == "requiem of spirit")
             {
-                var songsUnlocked = (Song)read(Offset.Songs);
-                current.HasRequiemOfSpirit = songsUnlocked.HasFlag(Song.RequiemOfSpirit);
+                current.HasRequiemOfSpirit = current.Data.Songs.HasFlag(Songs.RequiemOfSpirit);
                 return old.Dialog == Dialog.RequiemOfSpirit
                     && current.Dialog == Dialog.None
                     && current.HasRequiemOfSpirit;
             }
             else if (segment == "nocturne of shadow")
             {
-                var songsUnlocked = (Song)read(Offset.Songs);
-                current.HasNocturneOfShadow = songsUnlocked.HasFlag(Song.NocturneOfShadow);
+                current.HasNocturneOfShadow = current.Data.Songs.HasFlag(Songs.NocturneOfShadow);
                 return old.Dialog == Dialog.NocturneOfShadow
                     && current.Dialog == Dialog.None
                     && current.HasNocturneOfShadow;
@@ -332,6 +316,12 @@ namespace LiveSplit.ASL
                 current.HasSlingshot = getInventoryItem(Inventory.Slingshot) == Item.Slingshot;
                 return !old.HasSlingshot && current.HasSlingshot;
             }
+            else if (segment == "boomerang")
+            {
+                current.HasBoomerang = getInventoryItem(Inventory.Boomerang) == Item.Boomerang;
+                return !old.HasBoomerang && current.HasBoomerang;
+                //TODO Test
+            }
             else if (segment == "bombchus" || segment == "spirit chus" || segment == "spirit bombchus")
             {
                 current.HasBombchus = getInventoryItem(Inventory.Bombchus) == Item.Bombchus;
@@ -355,16 +345,13 @@ namespace LiveSplit.ASL
             }
             else if (segment == "forest escape" || segment == "escape")
             {
-                current.Entrance = getEntrance();
-                current.Cutscene = getCutscene();
-
                 var escapedToRiver =
-                    !checkEntrance(old.Entrance, Entrance.ForestToRiver)
-                    && checkEntrance(current.Entrance, Entrance.ForestToRiver);
+                    !checkEntrance(old.Data.Entrance, Entrance.ForestToRiver)
+                    && checkEntrance(current.Data.Entrance, Entrance.ForestToRiver);
 
                 current.IsInFairyOcarinaCutscene =
-                    checkEntrance(current.Entrance, Entrance.BridgeBetweenFieldAndForest)
-                    && current.Cutscene == Cutscene.FairyOcarina;
+                    checkEntrance(current.Data.Entrance, Entrance.BridgeBetweenFieldAndForest)
+                    && current.Data.Cutscene == Cutscene.FairyOcarina;
 
                 var escapedToSaria =
                     !old.IsInFairyOcarinaCutscene
@@ -374,10 +361,8 @@ namespace LiveSplit.ASL
             }
             else if (segment == "child 2")
             {
-                current.Cutscene = getCutscene();
-
-                return old.Cutscene == Cutscene.None
-                    && current.Cutscene == Cutscene.MasterSword
+                return old.Data.Cutscene == Cutscene.None
+                    && current.Data.Cutscene == Cutscene.MasterSword
                     && current.Scene == Scene.TempleOfTime;
                 //TODO Test (might screw up when doing the weird suns song thing)
             }
@@ -398,6 +383,11 @@ namespace LiveSplit.ASL
             {
                 return old.Scene == Scene.KokiriForest && current.Scene == Scene.DekuTree;
             }
+            else if (segment.Contains("dampe"))
+            {
+                return old.Scene == Scene.Graveyard && current.Scene != Scene.Graveyard;
+                //TODO Test
+            }
             else if (segment == "gohma")
             {
                 return current.Scene == Scene.Gohma
@@ -406,22 +396,29 @@ namespace LiveSplit.ASL
             }
             else if (segment == "ganondorf" || segment == "wrong warp")
             {
-                current.Entrance = getEntrance();
-                return checkEntrance(old.Entrance, Entrance.WrongWarp)
-                    && !checkEntrance(current.Entrance, Entrance.WrongWarp);
+                return checkEntrance(old.Data.Entrance, Entrance.WrongWarp)
+                    && !checkEntrance(current.Data.Entrance, Entrance.WrongWarp);
             }
             else if (segment == "fire temple")
             {
-                current.Entrance = getEntrance();
-                return checkEntrance(old.Entrance, Entrance.VolvagiaBattle)
-                    && !checkEntrance(current.Entrance, Entrance.VolvagiaBattle);
+                return checkEntrance(old.Data.Entrance, Entrance.VolvagiaBattle)
+                    && !checkEntrance(current.Data.Entrance, Entrance.VolvagiaBattle);
                 //TODO Test with wrong warp
             }
             else if (segment == "collapse" || segment == "tower collapse")
             {
-                current.Entrance = getEntrance();
-                return !checkEntrance(old.Entrance, Entrance.GanonBattle)
-                    && checkEntrance(current.Entrance, Entrance.GanonBattle);
+                return !checkEntrance(old.Data.Entrance, Entrance.GanonBattle)
+                    && checkEntrance(current.Data.Entrance, Entrance.GanonBattle);
+            }
+            else if (segment == "fishing")
+            {
+                return checkEntrance(old.Data.Entrance, Entrance.FishingPond)
+                    && !checkEntrance(current.Data.Entrance, Entrance.FishingPond);
+            }
+            else if (segment.StartsWith("enter jabu"))
+            {
+                return !checkEntrance(old.Data.Entrance, Entrance.InsideJabuJabusBelly)
+                    && checkEntrance(current.Data.Entrance, Entrance.InsideJabuJabusBelly);
             }
             else if (segment.EndsWith("warp in fire") || segment.StartsWith("all fire"))
             {
@@ -449,29 +446,25 @@ namespace LiveSplit.ASL
             }
             else if (segment.EndsWith("dodongo hc") || segment.EndsWith("dodongo heart container"))
             {
-                current.Entrance = getEntrance();
-                current.HeartContainers = read(Offset.HeartContainers) >> 4;
-                return checkEntrance(current.Entrance, Entrance.DodongoBattle)
+                refreshHeartContainers();
+                return checkEntrance(current.Data.Entrance, Entrance.DodongoBattle)
                     && current.HeartContainers > old.HeartContainers;
             }
             else if (segment == "forest temple")
             {
-                current.Entrance = getEntrance();
-                current.HeartContainers = read(Offset.HeartContainers) >> 4;
-                return checkEntrance(current.Entrance, Entrance.ForestTempleBoss)
+                refreshHeartContainers();
+                return checkEntrance(current.Data.Entrance, Entrance.ForestTempleBoss)
                     && current.HeartContainers > old.HeartContainers;
             }
             else if (segment == "water temple" || segment.Contains("morpha") && (segment.Contains("heart container") || segment.Contains("hc")))
             {
-                current.Entrance = getEntrance();
-                current.HeartContainers = read(Offset.HeartContainers) >> 4;
-                return checkEntrance(current.Entrance, Entrance.WaterTempleBoss)
+                refreshHeartContainers();
+                return checkEntrance(current.Data.Entrance, Entrance.WaterTempleBoss)
                     && current.HeartContainers > old.HeartContainers;
             }
             else if (segment == "ganon")
             {
-                current.Entrance = getEntrance();
-                return checkEntrance(current.Entrance, Entrance.GanonBattle)
+                return checkEntrance(current.Data.Entrance, Entrance.GanonBattle)
                     && current.GanonsHealth <= 0
                     && old.GanonsAnimation != Animation.GanonFinalHit
                     && current.GanonsAnimation == Animation.GanonFinalHit;
