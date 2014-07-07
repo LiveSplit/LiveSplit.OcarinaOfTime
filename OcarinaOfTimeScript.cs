@@ -154,6 +154,11 @@ namespace LiveSplit.ASL
 
             current.LastActualDialog = Dialog.None;
 
+            current.Quiver = Quiver.None;
+            current.BombBag = BombBag.None;
+            current.Gauntlet = Gauntlet.None;
+            current.Scale = Scale.None;
+
             current.EyeBallFrogCount =
             current.LastActualDialogTime =
             current.HeartContainers =
@@ -170,6 +175,7 @@ namespace LiveSplit.ASL
             current.HasHookshot =
             current.HasLongshot =
             current.HasBoomerang =
+            current.HasOcarinaOfTime =
             current.HasIronBoots =
             current.HasHoverBoots =
             current.HasBombs =
@@ -216,6 +222,11 @@ namespace LiveSplit.ASL
             Func<Inventory, Item> getInventoryItem = slot => current.Data.Inventory[(int)slot ^ 0x3];
             Action refreshHeartContainers = () => current.HeartContainers = current.Data.HeartContainers >> 4;
             Action refreshHeartPieces = () => current.HeartPieces = current.Data.HeartPieces >> 4;
+            Func<Upgrade, ushort> getUpgrade = x => (ushort)((current.Data.Upgrades >> (int)x) & 0x3);
+            Action refreshQuiver = () => current.Quiver = (Quiver)getUpgrade(Upgrade.Quiver);
+            Action refreshBombBag = () => current.BombBag = (BombBag)getUpgrade(Upgrade.BombBag);
+            Action refreshGauntlet = () => current.Gauntlet = (Gauntlet)getUpgrade(Upgrade.Gauntlet);
+            Action refreshScale = () => current.Scale = (Scale)getUpgrade(Upgrade.Scale);
             Func<Entrance, Entrance, bool> checkEntrance = (x, y) => ((short)x | 0x3) == ((short)y | 0x3);
 
             //Check for Split
@@ -362,6 +373,17 @@ namespace LiveSplit.ASL
                 current.HasBombs = getInventoryItem(Inventory.Bombs) == Item.Bombs;
                 return !old.HasBombs && current.HasBombs;
             }
+            else if (segment == "ocarina of time")
+            {
+                current.HasOcarinaOfTime = getInventoryItem(Inventory.Ocarina) == Item.OcarinaOfTime;
+                return !old.HasOcarinaOfTime && current.HasOcarinaOfTime;
+            }
+            else if (segment == "big bomb bag")
+            {
+                refreshBombBag();
+                return old.BombBag != BombBag.BigBombBag
+                    && current.BombBag == BombBag.BigBombBag;
+            }
             else if (segment == "forest escape" || segment == "escape")
             {
                 var escapedToRiver =
@@ -477,6 +499,12 @@ namespace LiveSplit.ASL
                 }
 
                 //TODO Test All Fire Gold Skulltulas
+            }
+            else if (segment.Contains("lon lon") && (segment.Contains("hp") || segment.Contains("heart piece")))
+            {
+                refreshHeartPieces();
+                return checkEntrance(current.Data.Entrance, Entrance.LonLonWindMill)
+                       && current.HeartPieces != old.HeartPieces;
             }
             else if (segment.EndsWith("dodongo hc") || segment.EndsWith("dodongo heart container"))
             {

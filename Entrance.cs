@@ -97,6 +97,7 @@ namespace LiveSplit.OcarinaOfTime
         WaterTempleBoss = 0x417,
         FishingPond = 0x45F,
         GanonBattle = 0x517,
+        LonLonWindMill = 0x5D0,
         None = 0xFFFF
     }
 }
