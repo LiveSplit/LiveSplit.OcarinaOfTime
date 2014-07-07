@@ -90,6 +90,7 @@ namespace LiveSplit.OcarinaOfTime
         BridgeBetweenFieldAndForest = 0x011E,
         ForestToRiver = 0x1DD,
         WrongWarp = 0x256,
+        InsideJabuJabusBellyBoss = 0x301,
         VolvagiaBattle = 0x305,
         GanondorfDead = 0x330,
         DodongoBattle = 0x40B,

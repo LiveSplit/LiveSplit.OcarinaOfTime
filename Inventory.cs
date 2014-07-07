@@ -14,7 +14,7 @@ namespace LiveSplit.OcarinaOfTime
         Bombs = 2 + 0 * Width,
         Bow = 3 + 0 * Width,
         FireArrows = 4 + 0 * Width,
-        DinsFire = 6 + 0 * Width,
+        DinsFire = 5 + 0 * Width,
 
         Slingshot = 0 + 1 * Width,
         Ocarina = 1 + 1 * Width,

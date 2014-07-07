@@ -33,6 +33,10 @@ namespace LiveSplit.OcarinaOfTime
         [FieldOffset(0x36)]
         public ushort Rupees;
 
+        [MarshalAs(UnmanagedType.U1)]
+        [FieldOffset(0x3F)]
+        public bool HasDoubleMagic;
+
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 24)]
         [FieldOffset(0x74)]
         public Item[] Inventory;
@@ -48,5 +52,8 @@ namespace LiveSplit.OcarinaOfTime
         public Songs Songs;
         [FieldOffset(0xA6)]
         public SongsAndEmeralds SongsAndEmeralds;
+
+        [FieldOffset(0xA7)]
+        public byte HeartPieces;
     }
 }

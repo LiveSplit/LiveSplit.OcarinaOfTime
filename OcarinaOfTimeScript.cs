@@ -157,12 +157,14 @@ namespace LiveSplit.ASL
             current.EyeBallFrogCount =
             current.LastActualDialogTime =
             current.HeartContainers =
+            current.HeartPieces =
                 0;
 
             current.HasSword =
             current.HasBottle =
             current.HasIceArrows =
             current.HasFaroresWind =
+            current.HasDinsFire =
             current.HasSlingshot =
             current.HasBombchus =
             current.HasHookshot =
@@ -170,8 +172,9 @@ namespace LiveSplit.ASL
             current.HasBoomerang =
             current.HasIronBoots =
             current.HasHoverBoots =
-            current.HasSongOfStorms =
             current.HasBombs =
+            current.HasLensOfTruth =
+            current.HasSongOfStorms =
             current.HasBoleroOfFire =
             current.HasRequiemOfSpirit =
             current.HasNocturneOfShadow =
@@ -212,6 +215,7 @@ namespace LiveSplit.ASL
             Func<byte, byte, bool> check = (x, y) => (x & y) != 0x0;
             Func<Inventory, Item> getInventoryItem = slot => current.Data.Inventory[(int)slot ^ 0x3];
             Action refreshHeartContainers = () => current.HeartContainers = current.Data.HeartContainers >> 4;
+            Action refreshHeartPieces = () => current.HeartPieces = current.Data.HeartPieces >> 4;
             Func<Entrance, Entrance, bool> checkEntrance = (x, y) => ((short)x | 0x3) == ((short)y | 0x3);
 
             //Check for Split
@@ -283,6 +287,12 @@ namespace LiveSplit.ASL
                     && current.Dialog == Dialog.None
                     && current.HasNocturneOfShadow;
             }
+            else if (segment == "double magic")
+            {
+                return old.Dialog == Dialog.DoubleMagic
+                    && current.Dialog == Dialog.None
+                    && current.Data.HasDoubleMagic;
+            }
             else if (segment == "bottle")
             {
                 current.HasBottle = getInventoryItem(Inventory.Bottle1) == Item.EmptyBottle;
@@ -293,10 +303,15 @@ namespace LiveSplit.ASL
                 current.HasIceArrows = getInventoryItem(Inventory.IceArrows) == Item.IceArrows;
                 return !old.HasIceArrows && current.HasIceArrows;
             }
-            else if (segment.StartsWith("farore's wind"))
+            else if (segment.Contains("farore") && segment.Contains("wind"))
             {
                 current.HasFaroresWind = getInventoryItem(Inventory.FaroresWind) == Item.FaroresWind;
                 return !old.HasFaroresWind && current.HasFaroresWind;
+            }
+            else if (segment.Contains("din") && segment.Contains("fire"))
+            {
+                current.HasDinsFire = getInventoryItem(Inventory.DinsFire) == Item.DinsFire;
+                return !old.HasDinsFire && current.HasDinsFire;
             }
             else if (segment.EndsWith("bow"))
             {
@@ -320,7 +335,6 @@ namespace LiveSplit.ASL
             {
                 current.HasBoomerang = getInventoryItem(Inventory.Boomerang) == Item.Boomerang;
                 return !old.HasBoomerang && current.HasBoomerang;
-                //TODO Test
             }
             else if (segment == "bombchus" || segment == "spirit chus" || segment == "spirit bombchus")
             {
@@ -337,6 +351,11 @@ namespace LiveSplit.ASL
                 current.HasLongshot = getInventoryItem(Inventory.Hookshot) == Item.Longshot;
                 return !old.HasLongshot && current.HasLongshot;
                 //TODO Test
+            }
+            else if (segment.Contains("lens of truth"))
+            {
+                current.HasLensOfTruth = getInventoryItem(Inventory.LensOfTruth) == Item.LensOfTruth;
+                return !old.HasLensOfTruth && current.HasLensOfTruth;
             }
             else if (segment == "bombs")
             {
@@ -385,8 +404,18 @@ namespace LiveSplit.ASL
             }
             else if (segment.Contains("dampe"))
             {
-                return old.Scene == Scene.Graveyard && current.Scene != Scene.Graveyard;
-                //TODO Test
+                if (old.Scene != current.Scene)
+                {
+                    refreshHeartContainers();
+                    refreshHeartPieces();
+
+                    if (old.Scene == Scene.Graveyard
+                        && (old.HeartPieces != current.HeartPieces 
+                            || old.HeartContainers != current.HeartContainers))
+                        return true;
+                }
+
+                return false;
             }
             else if (segment == "gohma")
             {
@@ -419,6 +448,11 @@ namespace LiveSplit.ASL
             {
                 return !checkEntrance(old.Data.Entrance, Entrance.InsideJabuJabusBelly)
                     && checkEntrance(current.Data.Entrance, Entrance.InsideJabuJabusBelly);
+            }
+            else if (segment == "jabu")
+            {
+                return checkEntrance(old.Data.Entrance, Entrance.InsideJabuJabusBellyBoss)
+                    && checkEntrance(current.Data.Entrance, Entrance.ZorasFountain2);
             }
             else if (segment.EndsWith("warp in fire") || segment.StartsWith("all fire"))
             {
