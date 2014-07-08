@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LiveSplit.OcarinaOfTime
 {
-    public enum Quiver : ushort
+    public enum Quiver : uint
     {
         None = 0x0,
         Quiver30 = 0x1,

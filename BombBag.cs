@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LiveSplit.OcarinaOfTime
 {
-    public enum BombBag : ushort
+    public enum BombBag : uint
     {
         None = 0x0,
         BombBag = 0x1,

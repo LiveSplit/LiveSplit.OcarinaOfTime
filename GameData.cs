@@ -47,7 +47,7 @@ namespace LiveSplit.OcarinaOfTime
         public TunicsAndBoots TunicsAndBoots;
 
         [FieldOffset(0xA0)]
-        public ushort Upgrades;
+        public uint Upgrades;
 
         [FieldOffset(0xA4)]
         public MedallionsAndSongs MedallionsAndSongs;

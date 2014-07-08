@@ -93,6 +93,7 @@ namespace LiveSplit.OcarinaOfTime
         InsideJabuJabusBellyBoss = 0x301,
         VolvagiaBattle = 0x305,
         GanondorfDead = 0x330,
+        RichardZHouse = 0x398,
         DodongoBattle = 0x40B,
         WaterTempleBoss = 0x417,
         FishingPond = 0x45F,

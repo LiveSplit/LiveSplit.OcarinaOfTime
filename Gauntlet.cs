@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LiveSplit.OcarinaOfTime
 {
-    public enum Gauntlet : ushort
+    public enum Gauntlet : uint
     {
         None = 0x0,
         GoronBracelet = 0x1,

@@ -158,6 +158,12 @@ namespace LiveSplit.ASL
             current.BombBag = BombBag.None;
             current.Gauntlet = Gauntlet.None;
             current.Scale = Scale.None;
+            current.Wallet = Wallet.DefaultWallet;
+            current.BulletBag = BulletBag.None;
+            current.DekuSticks = DekuSticks.None;
+            current.DekuNuts = DekuNuts.None;
+
+            current.ChildTradeItem = Item.None;
 
             current.EyeBallFrogCount =
             current.LastActualDialogTime =
@@ -168,6 +174,7 @@ namespace LiveSplit.ASL
             current.HasSword =
             current.HasBottle =
             current.HasIceArrows =
+            current.HasFireArrows =
             current.HasFaroresWind =
             current.HasDinsFire =
             current.HasSlingshot =
@@ -189,6 +196,8 @@ namespace LiveSplit.ASL
             current.HasMasterSword =
             current.HasBiggoronSword =
             current.HasBow =
+            current.HasSpookyMask =
+            current.HasMaskOfTruth =
             current.IsInFairyOcarinaCutscene =
             current.DidMidoSkip =
                 false;
@@ -218,15 +227,18 @@ namespace LiveSplit.ASL
         public bool Split(LiveSplitState timer, dynamic old, dynamic current)
         {
             //Functions
-            Func<byte, byte, bool> check = (x, y) => (x & y) != 0x0;
             Func<Inventory, Item> getInventoryItem = slot => current.Data.Inventory[(int)slot ^ 0x3];
             Action refreshHeartContainers = () => current.HeartContainers = current.Data.HeartContainers >> 4;
             Action refreshHeartPieces = () => current.HeartPieces = current.Data.HeartPieces >> 4;
-            Func<Upgrade, ushort> getUpgrade = x => (ushort)((current.Data.Upgrades >> (int)x) & 0x3);
+            Func<Upgrade, uint> getUpgrade = x => (uint)((current.Data.Upgrades >> (int)x) & 0x7);
             Action refreshQuiver = () => current.Quiver = (Quiver)getUpgrade(Upgrade.Quiver);
             Action refreshBombBag = () => current.BombBag = (BombBag)getUpgrade(Upgrade.BombBag);
             Action refreshGauntlet = () => current.Gauntlet = (Gauntlet)getUpgrade(Upgrade.Gauntlet);
             Action refreshScale = () => current.Scale = (Scale)getUpgrade(Upgrade.Scale);
+            Action refreshWallet = () => current.Wallet = (Wallet)(getUpgrade(Upgrade.Wallet) & 0x3);
+            Action refreshBulletBag = () => current.BulletBag = (BulletBag)getUpgrade(Upgrade.BulletBag);
+            Action refreshDekuSticks = () => current.DekuSticks = (DekuSticks)getUpgrade(Upgrade.DekuSticks);
+            Action refreshDekuNuts = () => current.DekuNuts = (DekuNuts)getUpgrade(Upgrade.DekuNuts);
             Func<Entrance, Entrance, bool> checkEntrance = (x, y) => ((short)x | 0x3) == ((short)y | 0x3);
 
             //Check for Split
@@ -314,6 +326,11 @@ namespace LiveSplit.ASL
                 current.HasIceArrows = getInventoryItem(Inventory.IceArrows) == Item.IceArrows;
                 return !old.HasIceArrows && current.HasIceArrows;
             }
+            else if (segment.StartsWith("fire arrow"))
+            {
+                current.HasFireArrows = getInventoryItem(Inventory.FireArrows) == Item.FireArrows;
+                return !old.HasFireArrows && current.HasFireArrows;
+            }
             else if (segment.Contains("farore") && segment.Contains("wind"))
             {
                 current.HasFaroresWind = getInventoryItem(Inventory.FaroresWind) == Item.FaroresWind;
@@ -378,11 +395,39 @@ namespace LiveSplit.ASL
                 current.HasOcarinaOfTime = getInventoryItem(Inventory.Ocarina) == Item.OcarinaOfTime;
                 return !old.HasOcarinaOfTime && current.HasOcarinaOfTime;
             }
+            else if (segment == "spooky mask")
+            {
+                current.HasSpookyMask = getInventoryItem(Inventory.ChildTradeItem) == Item.SpookyMask;
+                return !old.HasSpookyMask && current.HasSpookyMask;
+            }
+            else if (segment == "mask of truth")
+            {
+                current.HasMaskOfTruth = getInventoryItem(Inventory.ChildTradeItem) == Item.MaskOfTruth;
+                return !old.HasMaskOfTruth && current.HasMaskOfTruth;
+            }
+            else if (segment.Contains("sell") && segment.Contains("bunny"))
+            {
+                current.ChildTradeItem = getInventoryItem(Inventory.ChildTradeItem);
+                return old.ChildTradeItem == Item.BunnyHood 
+                    && current.ChildTradeItem == Item.SoldOut;
+            }
             else if (segment == "big bomb bag")
             {
                 refreshBombBag();
                 return old.BombBag != BombBag.BigBombBag
                     && current.BombBag == BombBag.BigBombBag;
+            }
+            else if ((segment.Contains("2nd") || segment.Contains("second")) && segment.Contains("stick"))
+            {
+                refreshDekuSticks();
+                return old.DekuSticks != DekuSticks.DekuSticks30
+                    && current.DekuSticks == DekuSticks.DekuSticks30;
+            }
+            else if ((segment.Contains("nut")) && segment.Contains("upgrade"))
+            {
+                refreshDekuNuts();
+                return old.DekuNuts != DekuNuts.DekuNuts40
+                    && current.DekuNuts == DekuNuts.DekuNuts40;
             }
             else if (segment == "forest escape" || segment == "escape")
             {
@@ -400,12 +445,13 @@ namespace LiveSplit.ASL
 
                 return escapedToRiver || escapedToSaria;
             }
-            else if (segment == "child 2")
+            else if (segment == "child 2" || segment == "adult 2")
             {
                 return old.Data.Cutscene == Cutscene.None
                     && current.Data.Cutscene == Cutscene.MasterSword
                     && current.Scene == Scene.TempleOfTime;
                 //TODO Test (might screw up when doing the weird suns song thing)
+                //TODO Test Adult 2
             }
             else if (segment == "kakariko")
             {
@@ -423,6 +469,10 @@ namespace LiveSplit.ASL
             else if (segment == "deku tree")
             {
                 return old.Scene == Scene.KokiriForest && current.Scene == Scene.DekuTree;
+            }
+            else if (segment == "scrubs")
+            {
+                return old.Scene == Scene.DekuTree && current.Scene == Scene.Gohma;
             }
             else if (segment.Contains("dampe"))
             {
@@ -504,6 +554,12 @@ namespace LiveSplit.ASL
             {
                 refreshHeartPieces();
                 return checkEntrance(current.Data.Entrance, Entrance.LonLonWindMill)
+                       && current.HeartPieces != old.HeartPieces;
+            }
+            else if (segment.Contains("richardz"))
+            {
+                refreshHeartPieces();
+                return checkEntrance(current.Data.Entrance, Entrance.RichardZHouse)
                        && current.HeartPieces != old.HeartPieces;
             }
             else if (segment.EndsWith("dodongo hc") || segment.EndsWith("dodongo heart container"))
