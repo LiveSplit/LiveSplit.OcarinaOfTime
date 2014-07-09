@@ -95,6 +95,7 @@ namespace LiveSplit.OcarinaOfTime
         GanondorfDead = 0x330,
         RichardZHouse = 0x398,
         DodongoBattle = 0x40B,
+        ShadowTempleBoss = 0x413,
         WaterTempleBoss = 0x417,
         FishingPond = 0x45F,
         GanonBattle = 0x517,

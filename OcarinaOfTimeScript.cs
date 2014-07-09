@@ -80,12 +80,14 @@ namespace LiveSplit.ASL
             AddPointer<Scene>("Scene", _base, 0x1c8546);
             AddPointer<sbyte>("GohmasHealth", _base, 0x1e840c);
             AddPointer<sbyte>("GanonsHealth", _base, 0x1fa2dc);
+            AddPointer<sbyte>("GanondorfsHealth", _base, 0x20b5cc);
             AddPointer<Animation>("GanonsAnimation", _base, 0x1fa374);
             AddPointer<Dialog>("Dialog", _base, 0x1d8872);
             AddPointer<ScreenType>("IsOnTitleScreenOrFileSelect", _base, 0x11b92c);
             AddPointer<float>("X", _base, 0x1c8714);
             AddPointer<float>("Y", _base, 0x1c8718);
             AddPointer<float>("Z", _base, 0x1c871c);
+            AddPointer<byte>("WarpAnimationPlaying", _base, 0x1c87cc);
         }
 
         private void AddPointer<T>(String name, int _base, params int[] offsets)
@@ -169,10 +171,13 @@ namespace LiveSplit.ASL
             current.LastActualDialogTime =
             current.HeartContainers =
             current.HeartPieces =
+            current.PoeCount =
                 0;
 
             current.HasSword =
+            current.HasMirrorShield =
             current.HasBottle =
+            current.HasBottle4 =
             current.HasIceArrows =
             current.HasFireArrows =
             current.HasFaroresWind =
@@ -187,6 +192,7 @@ namespace LiveSplit.ASL
             current.HasHoverBoots =
             current.HasBombs =
             current.HasLensOfTruth =
+            current.HasGerudoMemberShipCard =
             current.HasSongOfStorms =
             current.HasBoleroOfFire =
             current.HasRequiemOfSpirit =
@@ -228,6 +234,7 @@ namespace LiveSplit.ASL
         {
             //Functions
             Func<Inventory, Item> getInventoryItem = slot => current.Data.Inventory[(int)slot ^ 0x3];
+            Action<Inventory> checkPoe = slot => { if (getInventoryItem(slot) == Item.BigPoe && old.Data.Inventory[(int)slot ^ 0x3] != Item.BigPoe) current.PoeCount++; };
             Action refreshHeartContainers = () => current.HeartContainers = current.Data.HeartContainers >> 4;
             Action refreshHeartPieces = () => current.HeartPieces = current.Data.HeartPieces >> 4;
             Func<Upgrade, uint> getUpgrade = x => (uint)((current.Data.Upgrades >> (int)x) & 0x7);
@@ -253,6 +260,12 @@ namespace LiveSplit.ASL
                 return false;
             }
 
+            //Checking Poes
+            checkPoe(Inventory.Bottle1);
+            checkPoe(Inventory.Bottle2);
+            checkPoe(Inventory.Bottle3);
+            checkPoe(Inventory.Bottle4);
+
             if (segment == "sword" || segment == "kokiri sword")
             {
                 current.HasSword = current.Data.SwordsAndShields.HasFlag(SwordsAndShields.KokiriSword);
@@ -268,6 +281,11 @@ namespace LiveSplit.ASL
                 current.HasBiggoronSword = current.Data.SwordsAndShields.HasFlag(SwordsAndShields.BiggoronSword);
                 return !old.HasBiggoronSword && current.HasBiggoronSword;
             }
+            else if (segment == "mirror shield")
+            {
+                current.HasMirrorShield = current.Data.SwordsAndShields.HasFlag(SwordsAndShields.MirrorShield);
+                return !old.HasMirrorShield && current.HasMirrorShield;
+            }
             else if (segment == "hover boots")
             {
                 current.HasHoverBoots = current.Data.TunicsAndBoots.HasFlag(TunicsAndBoots.HoverBoots);
@@ -277,6 +295,11 @@ namespace LiveSplit.ASL
             {
                 current.HasIronBoots = current.Data.TunicsAndBoots.HasFlag(TunicsAndBoots.IronBoots);
                 return !old.HasIronBoots && current.HasIronBoots;
+            }
+            else if (segment.Contains("gerudo") && segment.Contains("card"))
+            {
+                current.HasGerudoMemberShipCard = current.Data.SongsAndEmeralds.HasFlag(SongsAndEmeralds.GerudoMemberShipCard);
+                return !old.HasGerudoMemberShipCard && current.HasGerudoMemberShipCard;
             }
             else if (segment == "song of storms")
             {
@@ -316,10 +339,27 @@ namespace LiveSplit.ASL
                     && current.Dialog == Dialog.None
                     && current.Data.HasDoubleMagic;
             }
+            else if (segment == "3 poes")
+            {
+                return current.PoeCount >= 3 
+                    && old.Dialog == Dialog.BigPoe 
+                    && current.Dialog == Dialog.None;
+            }
+            else if (segment == "6 poes")
+            {
+                return current.PoeCount >= 6
+                    && old.Dialog == Dialog.BigPoe
+                    && current.Dialog == Dialog.None;
+            }
             else if (segment == "bottle")
             {
                 current.HasBottle = getInventoryItem(Inventory.Bottle1) == Item.EmptyBottle;
                 return !old.HasBottle && current.HasBottle;
+            }
+            else if (segment.Contains("bottle") && (segment.Contains("last") || segment.Contains("final") || segment.Contains("4th") || segment.Contains("fourth")))
+            {
+                current.HasBottle4 = getInventoryItem(Inventory.Bottle4) == Item.EmptyBottle;
+                return !old.HasBottle4 && current.HasBottle4;
             }
             else if (segment.StartsWith("ice arrow"))
             {
@@ -330,11 +370,6 @@ namespace LiveSplit.ASL
             {
                 current.HasFireArrows = getInventoryItem(Inventory.FireArrows) == Item.FireArrows;
                 return !old.HasFireArrows && current.HasFireArrows;
-            }
-            else if (segment.Contains("farore") && segment.Contains("wind"))
-            {
-                current.HasFaroresWind = getInventoryItem(Inventory.FaroresWind) == Item.FaroresWind;
-                return !old.HasFaroresWind && current.HasFaroresWind;
             }
             else if (segment.Contains("din") && segment.Contains("fire"))
             {
@@ -423,11 +458,17 @@ namespace LiveSplit.ASL
                 return old.DekuSticks != DekuSticks.DekuSticks30
                     && current.DekuSticks == DekuSticks.DekuSticks30;
             }
-            else if ((segment.Contains("nut")) && segment.Contains("upgrade"))
+            else if (segment.Contains("nut") && segment.Contains("upgrade"))
             {
                 refreshDekuNuts();
                 return old.DekuNuts != DekuNuts.DekuNuts40
                     && current.DekuNuts == DekuNuts.DekuNuts40;
+            }
+            else if (segment.Contains("golden gauntlet"))
+            {
+                refreshGauntlet();
+                return old.Gauntlet != Gauntlet.GoldenGauntlets
+                    && current.Gauntlet == Gauntlet.GoldenGauntlets;
             }
             else if (segment == "forest escape" || segment == "escape")
             {
@@ -497,8 +538,20 @@ namespace LiveSplit.ASL
             }
             else if (segment == "ganondorf" || segment == "wrong warp")
             {
-                return checkEntrance(old.Data.Entrance, Entrance.WrongWarp)
+                var wrongWarp = checkEntrance(old.Data.Entrance, Entrance.WrongWarp)
                     && !checkEntrance(current.Data.Entrance, Entrance.WrongWarp);
+
+                var ganondorfDead = current.Scene == Scene.GanondorfBattle
+                    && current.GanondorfsHealth <= 0
+                    && old.GanondorfsHealth > 0;
+
+                return wrongWarp || ganondorfDead;
+            }
+            else if (segment.Contains("spirit") && segment.Contains("boss door"))
+            {
+                return !checkEntrance(old.Data.Entrance, Entrance.SpiritTempleBoss)
+                    && checkEntrance(current.Data.Entrance, Entrance.SpiritTempleBoss);
+                //TODO Test with wrong warp
             }
             else if (segment == "fire temple")
             {
@@ -506,7 +559,7 @@ namespace LiveSplit.ASL
                     && !checkEntrance(current.Data.Entrance, Entrance.VolvagiaBattle);
                 //TODO Test with wrong warp
             }
-            else if (segment == "collapse" || segment == "tower collapse")
+            else if (segment == "collapse" || segment == "tower collapse" || segment == "castle escape" || segment == "tower escape")
             {
                 return !checkEntrance(old.Data.Entrance, Entrance.GanonBattle)
                     && checkEntrance(current.Data.Entrance, Entrance.GanonBattle);
@@ -526,7 +579,7 @@ namespace LiveSplit.ASL
                 return checkEntrance(old.Data.Entrance, Entrance.InsideJabuJabusBellyBoss)
                     && checkEntrance(current.Data.Entrance, Entrance.ZorasFountain2);
             }
-            else if (segment.EndsWith("warp in fire") || segment.StartsWith("all fire"))
+            else if (segment.Contains("warp in fire") || segment.StartsWith("all fire") || segment.Contains("warp in shadow"))
             {
                 if (current.Dialog != Dialog.None)
                 {
@@ -549,6 +602,12 @@ namespace LiveSplit.ASL
                 }
 
                 //TODO Test All Fire Gold Skulltulas
+                //TODO Test warp in shadow temple
+            }
+            else if (segment.Contains("farore") && segment.Contains("wind"))
+            {
+                current.HasFaroresWind = getInventoryItem(Inventory.FaroresWind) == Item.FaroresWind;
+                return !old.HasFaroresWind && current.HasFaroresWind;
             }
             else if (segment.Contains("lon lon") && (segment.Contains("hp") || segment.Contains("heart piece")))
             {
@@ -586,6 +645,18 @@ namespace LiveSplit.ASL
                     && current.GanonsHealth <= 0
                     && old.GanonsAnimation != Animation.GanonFinalHit
                     && current.GanonsAnimation == Animation.GanonFinalHit;
+            }
+            else if (segment == "shadow temple")
+            {
+                return checkEntrance(current.Data.Entrance, Entrance.ShadowTempleBoss)
+                    && old.WarpAnimationPlaying == 0
+                    && current.WarpAnimationPlaying == 1;
+            }
+            else if (segment == "spirit temple")
+            {
+                return checkEntrance(current.Data.Entrance, Entrance.SpiritTempleBoss)
+                    && old.WarpAnimationPlaying == 0
+                    && current.WarpAnimationPlaying == 1;
             }
 
             return false;

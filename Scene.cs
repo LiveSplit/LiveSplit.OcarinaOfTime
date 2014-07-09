@@ -11,6 +11,7 @@ namespace LiveSplit.OcarinaOfTime
         Gohma = 0x11,
         FileSelect1 = 0x17,
         FileSelect2 = 0x18,
+        GanondorfBattle = 0x19,
         TempleOfTime = 0x43,
         Kakariko = 0x52,
         Graveyard = 0x53,
