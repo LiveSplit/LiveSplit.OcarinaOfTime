@@ -123,7 +123,7 @@ namespace LiveSplit.ASL
             var correctChecksum = "DLEZ";
 
             //Check for NTSC 1.0
-            var gameDataCheck = ~new DeepPointer<String>(4, Game, (int)Base, 0x11a7ac);
+            var gameDataCheck = ~new DeepPointer<String>(4, Game, (int)Base, 0x11a5ec);
 
             if (gameDataCheck == correctChecksum)
                 return GameVersion.NTSC10;
@@ -245,6 +245,11 @@ namespace LiveSplit.ASL
             current.HasRequiemOfSpirit =
             current.HasNocturneOfShadow =
             current.HasZeldasLullaby =
+            current.HasCojiro =
+            current.HasOddMushroom =
+            current.HasOddPotion =
+            current.HasPoachersSaw =
+            current.HasBrokenGoronsSword =
             current.HasEyeBallFrog =
             current.HasMasterSword =
             current.HasBiggoronSword =
@@ -380,6 +385,12 @@ namespace LiveSplit.ASL
                     && current.Dialog == Dialog.None
                     && current.HasNocturneOfShadow;
             }
+            else if (segment == "magic")
+            {
+                return old.Dialog == Dialog.None
+                    && current.Dialog == Dialog.Magic
+                    && current.Data.HasMagic;
+            }
             else if (segment == "double magic")
             {
                 return old.Dialog == Dialog.DoubleMagic
@@ -428,6 +439,31 @@ namespace LiveSplit.ASL
                 current.HasBow = getInventoryItem(Inventory.Bow) == Item.Bow;
                 return !old.HasBow && current.HasBow;
                 //TODO Test
+            }
+            else if (segment == "cojiro")
+            {
+                current.HasCojiro = getInventoryItem(Inventory.AdultTradeItem) == Item.Cojiro;
+                return !old.HasCojiro && current.HasCojiro;
+            }
+            else if (segment == "odd mushroom")
+            {
+                current.HasOddMushroom = getInventoryItem(Inventory.AdultTradeItem) == Item.OddMushroom;
+                return !old.HasOddMushroom && current.HasOddMushroom;
+            }
+            else if (segment == "odd potion")
+            {
+                current.HasOddPotion = getInventoryItem(Inventory.AdultTradeItem) == Item.OddPotion;
+                return !old.HasOddPotion && current.HasOddPotion;
+            }
+            else if (segment.Contains("poacher") || segment.Contains("saw"))
+            {
+                current.HasPoachersSaw = getInventoryItem(Inventory.AdultTradeItem) == Item.PoachersSaw;
+                return !old.HasPoachersSaw && current.HasPoachersSaw;
+            }
+            else if (segment.Contains("broken") && segment.Contains("sword"))
+            {
+                current.HasBrokenGoronsSword = getInventoryItem(Inventory.AdultTradeItem) == Item.BrokenGoronsSword;
+                return !old.HasBrokenGoronsSword && current.HasBrokenGoronsSword;
             }
             else if (segment.EndsWith("frog"))
             {

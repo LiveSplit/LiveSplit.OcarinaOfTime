@@ -34,6 +34,10 @@ namespace LiveSplit.OcarinaOfTime
         public ushort Rupees;
 
         [MarshalAs(UnmanagedType.U1)]
+        [FieldOffset(0x39)]
+        public bool HasMagic;
+
+        [MarshalAs(UnmanagedType.U1)]
         [FieldOffset(0x3F)]
         public bool HasDoubleMagic;
 

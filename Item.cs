@@ -58,7 +58,7 @@ namespace LiveSplit.OcarinaOfTime
         OddMushroom = 0x30,
         OddPotion = 0x31,
         PoachersSaw = 0x32,
-        GoronsSwordBroken = 0x33,
+        BrokenGoronsSword = 0x33,
         Prescription = 0x34,
         EyeBallFrog = 0x35,
         EyeDrops = 0x36,

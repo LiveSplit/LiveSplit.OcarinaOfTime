@@ -24,7 +24,7 @@ namespace LiveSplit.OcarinaOfTime
 
         public string Description
         {
-            get { return "Automatically splits for Ocarina of Time NTSC 1.0 on Project64 1.6, 1.7 and mupen64"; }
+            get { return "Automatically splits for Ocarina of Time NTSC 1.0 and NTSC 1.2 on Project64 1.6, 1.7 and mupen64."; }
         }
 
         public IComponent Create(LiveSplitState state)
