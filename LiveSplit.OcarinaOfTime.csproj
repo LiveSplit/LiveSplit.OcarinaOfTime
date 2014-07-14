@@ -58,6 +58,7 @@
     <Compile Include="Dialog.cs" />
     <Compile Include="EmulatorBase.cs" />
     <Compile Include="Entrance.cs" />
+    <Compile Include="GameVersion.cs" />
     <Compile Include="Gauntlet.cs" />
     <Compile Include="Quiver.cs" />
     <Compile Include="Scale.cs" />

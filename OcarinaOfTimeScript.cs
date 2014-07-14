@@ -75,6 +75,18 @@ namespace LiveSplit.ASL
         {
             State.ValueDefinitions.Clear();
 
+            var gameVersion = GetGameVersion();
+
+            switch (gameVersion)
+            {
+                case GameVersion.NTSC10: RebuildNTSC10(_base); break;
+                case GameVersion.NTSC12: RebuildNTSC12(_base); break;
+                default: Game = null; break;
+            }
+        }
+
+        private void RebuildNTSC10(int _base)
+        {
             AddPointer<GameData>("Data", _base, 0x11a5d0);
             AddPointer<int>("GameFrames", _base, 0x11f568);
             AddPointer<Scene>("Scene", _base, 0x1c8546);
@@ -88,6 +100,41 @@ namespace LiveSplit.ASL
             AddPointer<float>("Y", _base, 0x1c8718);
             AddPointer<float>("Z", _base, 0x1c871c);
             AddPointer<byte>("WarpAnimationPlaying", _base, 0x1c87cc);
+        }
+        private void RebuildNTSC12(int _base)
+        {
+            AddPointer<GameData>("Data", _base, 0x11ac80);
+            AddPointer<int>("GameFrames", _base, 0x11fc30);
+            AddPointer<Scene>("Scene", _base, 0x1c8e06);
+            AddPointer<sbyte>("GohmasHealth", _base, 0x1e8ccc);
+            AddPointer<sbyte>("GanonsHealth", _base, 0x1fabac);
+            AddPointer<sbyte>("GanondorfsHealth", _base, 0x20be7c);
+            AddPointer<Animation>("GanonsAnimation", _base, 0x1fac44);
+            AddPointer<Dialog>("Dialog", _base, 0x1d9132);
+            AddPointer<ScreenType>("IsOnTitleScreenOrFileSelect", _base, 0x11bfdc);
+            AddPointer<float>("X", _base, 0x1db314);
+            AddPointer<float>("Y", _base, 0x1db318);
+            AddPointer<float>("Z", _base, 0x1db31c);
+            AddPointer<byte>("WarpAnimationPlaying", _base, 0x1c908c);
+        }
+
+        private GameVersion GetGameVersion()
+        {
+            var correctChecksum = "DLEZ";
+
+            //Check for NTSC 1.0
+            var gameDataCheck = ~new DeepPointer<String>(4, Game, (int)Base, 0x11a7ac);
+
+            if (gameDataCheck == correctChecksum)
+                return GameVersion.NTSC10;
+
+            //Check for NTSC 1.2
+            gameDataCheck = ~new DeepPointer<String>(4, Game, (int)Base, 0x11ac9c);
+
+            if (gameDataCheck == correctChecksum)
+                return GameVersion.NTSC12;
+
+            return GameVersion.Unknown;
         }
 
         private void AddPointer<T>(String name, int _base, params int[] offsets)
@@ -551,7 +598,6 @@ namespace LiveSplit.ASL
             {
                 return !checkEntrance(old.Data.Entrance, Entrance.SpiritTempleBoss)
                     && checkEntrance(current.Data.Entrance, Entrance.SpiritTempleBoss);
-                //TODO Test with wrong warp
             }
             else if (segment == "fire temple")
             {
