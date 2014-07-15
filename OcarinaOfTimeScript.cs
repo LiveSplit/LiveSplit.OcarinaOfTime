@@ -88,6 +88,7 @@ namespace LiveSplit.ASL
         private void RebuildNTSC10(int _base)
         {
             AddPointer<GameData>("Data", _base, 0x11a5d0);
+            AddPointer<byte>("FPSDenominator", _base, 0x1c6fa2);
             AddPointer<int>("GameFrames", _base, 0x11f568);
             AddPointer<Scene>("Scene", _base, 0x1c8546);
             AddPointer<sbyte>("GohmasHealth", _base, 0x1e840c);
@@ -104,6 +105,7 @@ namespace LiveSplit.ASL
         private void RebuildNTSC12(int _base)
         {
             AddPointer<GameData>("Data", _base, 0x11ac80);
+            AddPointer<byte>("FPSDenominator", _base, 0x1c7862);
             AddPointer<int>("GameFrames", _base, 0x11fc30);
             AddPointer<Scene>("Scene", _base, 0x1c8e06);
             AddPointer<sbyte>("GohmasHealth", _base, 0x1e8ccc);
@@ -198,8 +200,11 @@ namespace LiveSplit.ASL
         public bool Start(LiveSplitState timer, dynamic old, dynamic current)
         {
             //Set Start Up State
-            current.GameTime = TimeSpan.Zero;
-            current.AccumulatedFrames = -current.GameFrames;
+
+            current.AccumulatedFrames20 =
+            current.AccumulatedFrames30 =
+            current.AccumulatedFrames60 =
+                0;
 
             current.LastActualDialog = Dialog.None;
 
@@ -756,10 +761,22 @@ namespace LiveSplit.ASL
 
         public TimeSpan? GameTime(LiveSplitState timer, dynamic old, dynamic current)
         {
-            if (current.GameFrames < old.GameFrames)
-                current.AccumulatedFrames += old.GameFrames;
+            var delta = (current.GameFrames >= old.GameFrames)
+                ? current.GameFrames - old.GameFrames
+                : current.GameFrames;
 
-            return TimeSpan.FromSeconds((current.GameFrames + current.AccumulatedFrames) / 20.0f);
+            switch ((int)current.FPSDenominator)
+            {
+                case 1: current.AccumulatedFrames60 += delta; break;
+                case 2: current.AccumulatedFrames30 += delta; break;
+                case 3: current.AccumulatedFrames20 += delta; break;
+            }
+
+            var seconds = current.AccumulatedFrames20 / 20.0f 
+                + current.AccumulatedFrames30 / 30.0f 
+                + current.AccumulatedFrames60 / 60.0f;
+
+            return TimeSpan.FromSeconds(seconds);
         }
     }
 }
