@@ -9,6 +9,7 @@ namespace LiveSplit.OcarinaOfTime
     {
         Project64_16 = 0x000D6A1C,
         Project64_17 = 0x001002FC,
-        Mupen64 = 0x46d010
+        Mupen64 = 0x46d010,
+        Emu1964 = 0x000189C4,
     }
 }

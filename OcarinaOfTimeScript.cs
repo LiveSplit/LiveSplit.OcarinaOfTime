@@ -17,7 +17,7 @@ namespace LiveSplit.ASL
         public ASLState OldState { get; set; }
         public ASLState State { get; set; }
 
-        protected EmulatorBase Base { get; set; }
+        protected int Base { get; set; }
 
         public OcarinaOfTimeScript()
         {
@@ -47,28 +47,47 @@ namespace LiveSplit.ASL
                         State.RefreshValues(Game);
                         OldState = State;
                     }
+                    else
+                    {
+                        process = Process.GetProcessesByName("1964").FirstOrDefault();
+                        if (process != null)
+                        {
+                            Game = process;
+                            Rebuild1964();
+                            State.RefreshValues(Game);
+                            OldState = State;
+                        }
+                    }
                 }
             }
+        }
+
+        private void Rebuild1964()
+        {
+            ProcessModule module = Game.MainModule;
+
+            Base = (int)EmulatorBase.Emu1964;
+            Rebuild(Base);
         }
 
         private void RebuildMupen()
         {
             ProcessModule module = Game.MainModule;
 
-            Base = EmulatorBase.Mupen64;
-            Rebuild((int)Base - ((int)module.BaseAddress));
+            Base = (int)EmulatorBase.Mupen64;
+            Rebuild(Base - ((int)module.BaseAddress));
         }
 
         private void RebuildProject64()
         {
-            String version = ~new DeepPointer<String>(3, Game, 0x6aba2);
+            var version = Game.MainWindowTitle;
 
-            if (version == "1.6")
-                Base = EmulatorBase.Project64_16;
+            if (version.EndsWith("1.6"))
+                Base = (int)EmulatorBase.Project64_16;
             else
-                Base = EmulatorBase.Project64_17;
+                Base = (int)EmulatorBase.Project64_17;
            
-            Rebuild((int)Base);
+            Rebuild(Base);
         }
 
         private void Rebuild(int _base)

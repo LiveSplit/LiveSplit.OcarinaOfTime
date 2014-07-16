@@ -32,6 +32,12 @@ namespace LiveSplit
             _length = length;
         }
 
+        public DeepPointer(int length, Process process, String module, int base_, params int[] offsets)
+            : this(process, module, base_, offsets)
+        {
+            _length = length;
+        }
+
         public DeepPointer(Process process, int base_, params int[] offsets)
         {
             _process = process;
