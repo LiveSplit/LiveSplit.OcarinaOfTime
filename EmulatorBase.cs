@@ -11,5 +11,6 @@ namespace LiveSplit.OcarinaOfTime
         Project64_17 = 0x001002FC,
         Mupen64 = 0x46d010,
         Emu1964 = 0x000189C4,
+        BizHawk = 0x00001230
     }
 }

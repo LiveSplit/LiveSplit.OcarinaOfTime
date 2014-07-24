@@ -13,11 +13,9 @@ namespace LiveSplit.ASL
     public class OcarinaOfTimeScript
     {
         protected TimerModel Model { get; set; }
-        protected Process Game { get; set; }
+        protected Emulator Emulator { get; set; }
         public ASLState OldState { get; set; }
         public ASLState State { get; set; }
-
-        protected int Base { get; set; }
 
         public OcarinaOfTimeScript()
         {
@@ -26,71 +24,19 @@ namespace LiveSplit.ASL
 
         protected void TryConnect()
         {
-            if (Game == null || Game.HasExited)
+            if (Emulator == null || Emulator.Process.HasExited)
             {
-                Game = null;
-                var process = Process.GetProcessesByName("Project64").FirstOrDefault();
-                if (process != null)
+                Emulator = Emulator.TryConnect();
+                if (Emulator != null)
                 {
-                    Game = process;
-                    RebuildProject64();
-                    State.RefreshValues(Game);
+                    Rebuild();
+                    State.RefreshValues();
                     OldState = State;
-                }
-                else
-                {
-                    process = Process.GetProcessesByName("mupen64").FirstOrDefault();
-                    if (process != null)
-                    {
-                        Game = process;
-                        RebuildMupen();
-                        State.RefreshValues(Game);
-                        OldState = State;
-                    }
-                    else
-                    {
-                        process = Process.GetProcessesByName("1964").FirstOrDefault();
-                        if (process != null)
-                        {
-                            Game = process;
-                            Rebuild1964();
-                            State.RefreshValues(Game);
-                            OldState = State;
-                        }
-                    }
                 }
             }
         }
 
-        private void Rebuild1964()
-        {
-            ProcessModule module = Game.MainModule;
-
-            Base = (int)EmulatorBase.Emu1964;
-            Rebuild(Base);
-        }
-
-        private void RebuildMupen()
-        {
-            ProcessModule module = Game.MainModule;
-
-            Base = (int)EmulatorBase.Mupen64;
-            Rebuild(Base - ((int)module.BaseAddress));
-        }
-
-        private void RebuildProject64()
-        {
-            var version = Game.MainWindowTitle;
-
-            if (version.EndsWith("1.6"))
-                Base = (int)EmulatorBase.Project64_16;
-            else
-                Base = (int)EmulatorBase.Project64_17;
-           
-            Rebuild(Base);
-        }
-
-        private void Rebuild(int _base)
+        private void Rebuild()
         {
             State.ValueDefinitions.Clear();
 
@@ -98,45 +44,45 @@ namespace LiveSplit.ASL
 
             switch (gameVersion)
             {
-                case GameVersion.NTSC10: RebuildNTSC10(_base); break;
-                case GameVersion.NTSC12: RebuildNTSC12(_base); break;
-                default: Game = null; break;
+                case GameVersion.NTSC10: RebuildNTSC10(); break;
+                case GameVersion.NTSC12: RebuildNTSC12(); break;
+                default: Emulator = null; break;
             }
         }
 
-        private void RebuildNTSC10(int _base)
+        private void RebuildNTSC10()
         {
-            AddPointer<GameData>("Data", _base, 0x11a5d0);
-            AddPointer<byte>("FPSDenominator", _base, 0x1c6fa2);
-            AddPointer<int>("GameFrames", _base, 0x11f568);
-            AddPointer<Scene>("Scene", _base, 0x1c8546);
-            AddPointer<sbyte>("GohmasHealth", _base, 0x1e840c);
-            AddPointer<sbyte>("GanonsHealth", _base, 0x1fa2dc);
-            AddPointer<sbyte>("GanondorfsHealth", _base, 0x20b5cc);
-            AddPointer<Animation>("GanonsAnimation", _base, 0x1fa374);
-            AddPointer<Dialog>("Dialog", _base, 0x1d8872);
-            AddPointer<ScreenType>("IsOnTitleScreenOrFileSelect", _base, 0x11b92c);
-            AddPointer<float>("X", _base, 0x1c8714);
-            AddPointer<float>("Y", _base, 0x1c8718);
-            AddPointer<float>("Z", _base, 0x1c871c);
-            AddPointer<byte>("WarpAnimationPlaying", _base, 0x1c87cc);
+            AddPointer<GameData>("Data", 0x11a5d0);
+            AddPointer<byte>("FPSDenominator", 0x1c6fa2);
+            AddPointer<int>("GameFrames", 0x11f568);
+            AddPointer<Scene>("Scene", 0x1c8546);
+            AddPointer<sbyte>("GohmasHealth", 0x1e840c);
+            AddPointer<sbyte>("GanonsHealth", 0x1fa2dc);
+            AddPointer<sbyte>("GanondorfsHealth", 0x20b5cc);
+            AddPointer<Animation>("GanonsAnimation", 0x1fa374);
+            AddPointer<Dialog>("Dialog", 0x1d8872);
+            AddPointer<ScreenType>("IsOnTitleScreenOrFileSelect", 0x11b92c);
+            AddPointer<float>("X", 0x1c8714);
+            AddPointer<float>("Y", 0x1c8718);
+            AddPointer<float>("Z", 0x1c871c);
+            AddPointer<byte>("WarpAnimationPlaying", 0x1c87cc);
         }
-        private void RebuildNTSC12(int _base)
+        private void RebuildNTSC12()
         {
-            AddPointer<GameData>("Data", _base, 0x11ac80);
-            AddPointer<byte>("FPSDenominator", _base, 0x1c7862);
-            AddPointer<int>("GameFrames", _base, 0x11fc30);
-            AddPointer<Scene>("Scene", _base, 0x1c8e06);
-            AddPointer<sbyte>("GohmasHealth", _base, 0x1e8ccc);
-            AddPointer<sbyte>("GanonsHealth", _base, 0x1fabac);
-            AddPointer<sbyte>("GanondorfsHealth", _base, 0x20be7c);
-            AddPointer<Animation>("GanonsAnimation", _base, 0x1fac44);
-            AddPointer<Dialog>("Dialog", _base, 0x1d9132);
-            AddPointer<ScreenType>("IsOnTitleScreenOrFileSelect", _base, 0x11bfdc);
-            AddPointer<float>("X", _base, 0x1db314);
-            AddPointer<float>("Y", _base, 0x1db318);
-            AddPointer<float>("Z", _base, 0x1db31c);
-            AddPointer<byte>("WarpAnimationPlaying", _base, 0x1c908c);
+            AddPointer<GameData>("Data", 0x11ac80);
+            AddPointer<byte>("FPSDenominator", 0x1c7862);
+            AddPointer<int>("GameFrames", 0x11fc30);
+            AddPointer<Scene>("Scene", 0x1c8e06);
+            AddPointer<sbyte>("GohmasHealth", 0x1e8ccc);
+            AddPointer<sbyte>("GanonsHealth", 0x1fabac);
+            AddPointer<sbyte>("GanondorfsHealth", 0x20be7c);
+            AddPointer<Animation>("GanonsAnimation", 0x1fac44);
+            AddPointer<Dialog>("Dialog", 0x1d9132);
+            AddPointer<ScreenType>("IsOnTitleScreenOrFileSelect", 0x11bfdc);
+            AddPointer<float>("X", 0x1db314);
+            AddPointer<float>("Y", 0x1db318);
+            AddPointer<float>("Z", 0x1db31c);
+            AddPointer<byte>("WarpAnimationPlaying", 0x1c908c);
         }
 
         private GameVersion GetGameVersion()
@@ -144,13 +90,13 @@ namespace LiveSplit.ASL
             var correctChecksum = "DLEZ";
 
             //Check for NTSC 1.0
-            var gameDataCheck = ~new DeepPointer<String>(4, Game, (int)Base, 0x11a5ec);
+            var gameDataCheck = ~Emulator.CreatePointer<String>(4, 0x11a5ec);
 
             if (gameDataCheck == correctChecksum)
                 return GameVersion.NTSC10;
 
             //Check for NTSC 1.2
-            gameDataCheck = ~new DeepPointer<String>(4, Game, (int)Base, 0x11ac9c);
+            gameDataCheck = ~Emulator.CreatePointer<String>(4, 0x11ac9c);
 
             if (gameDataCheck == correctChecksum)
                 return GameVersion.NTSC12;
@@ -158,25 +104,25 @@ namespace LiveSplit.ASL
             return GameVersion.Unknown;
         }
 
-        private void AddPointer<T>(String name, int _base, params int[] offsets)
+        private void AddPointer<T>(String name, int address)
         {
-            AddPointer<T>(1, name, _base, offsets);
+            AddPointer<T>(1, name, address);
         }
 
-        private void AddPointer<T>(int length, String name, int _base, params int[] offsets)
+        private void AddPointer<T>(int length, String name, int address)
         {
             State.ValueDefinitions.Add(new ASLValueDefinition()
                 {
                     Identifier = name,
-                    Pointer = new DeepPointer<T>(length, Game, _base, offsets)
+                    Pointer = Emulator.CreatePointer<T>(length, address)
                 });
         }
 
         public void Update(LiveSplitState lsState)
         {
-            if (Game != null && !Game.HasExited)
+            if (Emulator != null && !Emulator.Process.HasExited)
             {
-                OldState = State.RefreshValues(Game);
+                OldState = State.RefreshValues();
 
                 if (lsState.CurrentPhase == TimerPhase.NotRunning)
                 {
@@ -197,9 +143,9 @@ namespace LiveSplit.ASL
                         Model.Split();
                     }
 
-                    var isLoading = IsLoading(lsState, OldState.Data, State.Data);
-                    if (isLoading != null)
-                        lsState.IsLoading = isLoading;
+                    var isPaused = IsPaused(lsState, OldState.Data, State.Data);
+                    if (isPaused != null)
+                        lsState.IsGameTimePaused = isPaused;
 
                     var gameTime = GameTime(lsState, OldState.Data, State.Data);
                     if (gameTime != null)
@@ -289,7 +235,7 @@ namespace LiveSplit.ASL
                 && !(current.Scene == Scene.FileSelect1 || current.Scene == Scene.FileSelect2);
         }
 
-        public void RBA(Item bItemAfterUsing, Item cRightItem)
+        /*public void RBA(Item bItemAfterUsing, Item cRightItem)
         {
             var ptr = new DeepPointer<Item>(Game, (int)Base, 0x11a644 + ((int)cRightItem ^ 0x3));
             ptr += bItemAfterUsing;
@@ -304,7 +250,7 @@ namespace LiveSplit.ASL
             {
                 ptr += (byte)((oldValue & ~0x7) | ((((dynamic)State.Data).GameFrames / (20 * 60 * 5)) % 3 + 0x4));
             }
-        }
+        }*/
 
         public bool Split(LiveSplitState timer, dynamic old, dynamic current)
         {
@@ -773,7 +719,7 @@ namespace LiveSplit.ASL
             return false;
         }
 
-        public bool IsLoading(LiveSplitState timer, dynamic old, dynamic current)
+        public bool IsPaused(LiveSplitState timer, dynamic old, dynamic current)
         {
             return true;
         }
