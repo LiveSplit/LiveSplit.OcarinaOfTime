@@ -21,29 +21,23 @@ namespace LiveSplit.OcarinaOfTime
             {
                 return BuildProject64(process);
             }
-            else
+
+            process = Process.GetProcessesByName("mupen64").FirstOrDefault();
+            if (process != null)
             {
-                process = Process.GetProcessesByName("mupen64").FirstOrDefault();
-                if (process != null)
-                {
-                    return BuildMupen(process);
-                }
-                else
-                {
-                    process = Process.GetProcessesByName("1964").FirstOrDefault();
-                    if (process != null)
-                    {
-                        return Build1964(process);
-                    }
-                    else
-                    {
-                        process = Process.GetProcessesByName("EmuHawk").FirstOrDefault();
-                        if (process != null)
-                        {
-                            return BuildBizHawk(process);
-                        }
-                    }
-                }
+                return BuildMupen(process);
+            }
+
+            process = Process.GetProcessesByName("1964").FirstOrDefault();
+            if (process != null)
+            {
+                return Build1964(process);
+            }
+
+            process = Process.GetProcessesByName("EmuHawk").FirstOrDefault();
+            if (process != null)
+            {
+                return BuildBizHawk(process);
             }
 
             return null;
