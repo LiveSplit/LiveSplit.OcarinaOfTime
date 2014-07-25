@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace LiveSplit.OcarinaOfTime
+﻿namespace LiveSplit.OcarinaOfTime
 {
     public enum BombBag : uint
     {
