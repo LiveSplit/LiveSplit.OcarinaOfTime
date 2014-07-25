@@ -8,6 +8,7 @@ The Component is currently compatible with the following emulators:
 - Project64 1.7
 - mupen64 0.5.1
 - 1964 r146
+- BizHawk 1.6.1
 
 The Component is currently compatible with the following versions of the game:
 - NTSC 1.0
