@@ -84,5 +84,9 @@ namespace LiveSplit.UI.Components
         public void RenameComparison(string oldName, string newName)
         {
         }
+
+        public void Dispose()
+        {
+        }
     }
 }
